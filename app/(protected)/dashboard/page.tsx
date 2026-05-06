@@ -1,7 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AiGenerativeIcon,
-  Calendar03Icon,
   ChartUpIcon,
   FileImageIcon,
   Folder01Icon,
@@ -29,51 +28,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-
-const metrics = [
-  {
-    title: "Active Projects",
-    value: "18",
-    description: "Projects currently in delivery",
-    badge: "+3 this month",
-    icon: Folder01Icon,
-  },
-  {
-    title: "Urgent Projects",
-    value: "4",
-    description: "Need owner attention today",
-    badge: "Watch closely",
-    icon: ChartUpIcon,
-  },
-  {
-    title: "Pending Design",
-    value: "7",
-    description: "Render, revision, or DED queues",
-    badge: "2 blocked",
-    icon: PaintBoardIcon,
-  },
-  {
-    title: "Material Issues",
-    value: "5",
-    description: "Vendor or ETA risks",
-    badge: "3 urgent",
-    icon: PackageIcon,
-  },
-  {
-    title: "New Leads",
-    value: "11",
-    description: "Fresh sales opportunities",
-    badge: "5 hot",
-    icon: ShoppingBag03Icon,
-  },
-  {
-    title: "Content Ready",
-    value: "6",
-    description: "Projects ready for capture",
-    badge: "2 shoots due",
-    icon: FileImageIcon,
-  },
-]
+import {
+  DesignTaskStatusBadge,
+  DesignTypeBadge,
+} from "@/src/features/design/components/design-badges"
+import { DailyUpdateHealthBadge } from "@/src/features/daily-updates/components/daily-update-badges"
+import {
+  MaterialStatusBadge,
+  MaterialUrgencyBadge,
+} from "@/src/features/materials/components/material-badges"
+import {
+  getDesignTaskMetrics,
+  getPendingDesignTasksQuery,
+} from "@/src/features/design/queries"
+import { getMaterialIssueMetrics } from "@/src/features/materials/queries"
+import { getProjectMetrics } from "@/src/features/projects/queries"
+import { formatDate } from "@/src/features/projects/utils"
+import { getLatestDailyUpdates } from "@/src/server/actions/daily-updates"
+import { getMaterialIssues } from "@/src/server/actions/materials"
 
 const projectRows = [
   ["Kebayoran Residence", "Build", "At risk", "Material ETA pending"],
@@ -82,11 +54,6 @@ const projectRows = [
 ]
 
 const snapshotCards = [
-  {
-    title: "Latest PM Updates",
-    description: "3 updates submitted today",
-    icon: Calendar03Icon,
-  },
   {
     title: "Design Status Snapshot",
     description: "2 approvals waiting",
@@ -109,7 +76,88 @@ const snapshotCards = [
   },
 ]
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [
+    projectMetrics,
+    designMetrics,
+    materialMetrics,
+    pendingDesignTasks,
+    latestDailyUpdates,
+    materialIssues,
+  ] = await Promise.all([
+    getProjectMetrics(),
+    getDesignTaskMetrics(),
+    getMaterialIssueMetrics(),
+    getPendingDesignTasksQuery(4),
+    getLatestDailyUpdates(4),
+    getMaterialIssues(4),
+  ])
+
+  const metrics = [
+    {
+      title: "Active Projects",
+      value: projectMetrics.active.toString(),
+      description: "Projects currently in delivery",
+      icon: Folder01Icon,
+    },
+    {
+      title: "Urgent Projects",
+      value: projectMetrics.urgent.toString(),
+      description: "Need owner attention today",
+      badge: projectMetrics.urgent > 0 ? "Watch closely" : undefined,
+      icon: ChartUpIcon,
+    },
+    {
+      title: "Pending Design",
+      value: designMetrics.pending.toString(),
+      description: "Render, revision, approval, or DED queues",
+      badge:
+        designMetrics.blocked > 0
+          ? `${designMetrics.blocked} blocked`
+          : undefined,
+      icon: PaintBoardIcon,
+    },
+    {
+      title: "Material Issues",
+      value: materialMetrics.openIssues.toString(),
+      description: "Vendor or ETA risks",
+      badge:
+        materialMetrics.critical > 0
+          ? `${materialMetrics.critical} critical`
+          : materialMetrics.high > 0
+            ? `${materialMetrics.high} high`
+            : undefined,
+      icon: PackageIcon,
+    },
+    {
+      title: "New Leads",
+      value: "11",
+      description: "Fresh sales opportunities",
+      badge: "5 hot",
+      icon: ShoppingBag03Icon,
+    },
+    {
+      title: "Content Ready",
+      value: projectMetrics.contentReady.toString(),
+      description: "Projects ready for capture",
+      icon: FileImageIcon,
+    },
+  ]
+
+  const dashboardSnapshotCards = snapshotCards.map((card) =>
+    card.title === "Design Status Snapshot"
+      ? {
+          ...card,
+          description: `${designMetrics.waitingApproval} approvals waiting, ${designMetrics.dedProgress} DED in progress`,
+        }
+      : card.title === "Material Warning Snapshot"
+        ? {
+            ...card,
+            description: `${materialMetrics.delayed} delayed, ${materialMetrics.high + materialMetrics.critical} high or critical`,
+          }
+      : card,
+  )
+
   return (
     <PageContainer>
       <PageHeader
@@ -189,18 +237,147 @@ export default function DashboardPage() {
           </Card>
         </div>
         <div className="grid gap-4">
-          {snapshotCards.map(({ title, description, icon }) => (
-            <Card key={title} size="sm">
-              <CardHeader>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                <span>Open module for details</span>
-                <HugeiconsIcon icon={icon} strokeWidth={2} />
-              </CardContent>
-            </Card>
-          ))}
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Latest PM Updates</CardTitle>
+              <CardDescription>
+                {latestDailyUpdates.length} latest progress reports from PMs.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {latestDailyUpdates.length > 0 ? (
+                latestDailyUpdates.map((update) => (
+                  <div key={update.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {update.project.projectName}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {update.updater?.name ?? "Unknown PM"} · {formatDate(update.updateDate)}
+                        </div>
+                      </div>
+                      <DailyUpdateHealthBadge
+                        healthStatus={update.healthStatus}
+                      />
+                    </div>
+                    <div className="line-clamp-2 text-sm text-muted-foreground">
+                      {update.nextAction ??
+                        update.issueNotes ??
+                        update.progressSummary}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">
+                        {update.progressPercentage !== null
+                          ? `${update.progressPercentage}%`
+                          : "Progress not set"}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {update.mediaAssets.length} attachments
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                  No PM updates recorded yet.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Design Status Snapshot</CardTitle>
+              <CardDescription>
+                Pending design, render, revision, and DED work.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {pendingDesignTasks.length > 0 ? (
+                pendingDesignTasks.map((task) => (
+                  <div key={task.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {task.taskName}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {task.project.projectName} · {task.designer?.name ?? "Unassigned"}
+                        </div>
+                      </div>
+                      <DesignTaskStatusBadge status={task.status} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DesignTypeBadge designType={task.designType} />
+                      <Badge variant="outline">{formatDate(task.dueDate)}</Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                  No pending design tasks.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Material Warning Snapshot</CardTitle>
+              <CardDescription>
+                Delayed, high, and critical purchasing issues.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {materialIssues.length > 0 ? (
+                materialIssues.map((material) => (
+                  <div key={material.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {material.materialName}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {material.project.projectName} · {material.vendor?.vendorName ?? "Vendor unassigned"}
+                        </div>
+                      </div>
+                      <MaterialUrgencyBadge
+                        urgencyLevel={material.urgencyLevel}
+                      />
+                    </div>
+                    <div className="line-clamp-2 text-sm text-muted-foreground">
+                      {material.issueNotes ?? "No issue notes recorded yet."}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <MaterialStatusBadge status={material.status} />
+                      <Badge variant="outline">ETA {formatDate(material.etaDate)}</Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                  No delayed, high, or critical material issues.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {dashboardSnapshotCards
+            .filter(
+              (card) =>
+                card.title !== "Design Status Snapshot" &&
+                card.title !== "Material Warning Snapshot",
+            )
+            .map(({ title, description, icon }) => (
+              <Card key={title} size="sm">
+                <CardHeader>
+                  <CardTitle>{title}</CardTitle>
+                  <CardDescription>{description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                  <span>Open module for details</span>
+                  <HugeiconsIcon icon={icon} strokeWidth={2} />
+                </CardContent>
+              </Card>
+            ))}
         </div>
       </div>
     </PageContainer>

@@ -45,6 +45,12 @@ import {
   ProjectPriorityBadge,
   ProjectStatusBadge,
 } from "@/src/features/projects/components/project-badges";
+import { DailyUpdateDialog } from "@/src/features/daily-updates/components/daily-update-dialog";
+import { DailyUpdateHealthBadge } from "@/src/features/daily-updates/components/daily-update-badges";
+import {
+  getDailyUpdateFormOptions,
+  getDailyUpdateMediaByUpdateIds,
+} from "@/src/features/daily-updates/queries";
 import { ProjectEditDialog } from "@/src/features/projects/components/project-edit-dialog";
 import { getProjectFormOptions } from "@/src/features/projects/queries";
 import {
@@ -56,6 +62,7 @@ import {
   getProjectById,
 } from "@/src/server/actions/projects";
 import { requirePageUser } from "@/src/lib/auth/permissions";
+import { getDesignMediaByTaskIds } from "@/src/features/design/queries";
 
 type ProjectDetailPageProps = {
   params: Promise<{
@@ -79,9 +86,21 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
+  const mediaByDesignTaskId = await getDesignMediaByTaskIds(
+    project.designTasks.map((task) => task.id),
+  );
+  const mediaByDailyUpdateId = await getDailyUpdateMediaByUpdateIds(
+    project.dailyUpdates.map((update) => update.id),
+  );
   const latestUpdate = project.dailyUpdates[0];
   const deadlineState = getDeadlineState(project.deadline);
   const canEdit = currentUser.role === "owner" || currentUser.role === "admin";
+  const canCreateDailyUpdate =
+    canEdit ||
+    (currentUser.role === "project_manager" && project.pmId === currentUser.id);
+  const dailyUpdateOptions = canCreateDailyUpdate
+    ? await getDailyUpdateFormOptions(currentUser)
+    : null;
 
   return (
     <PageContainer>
@@ -131,7 +150,7 @@ export default async function ProjectDetailPage({
       </Card>
 
       <Tabs defaultValue="overview" className="gap-4">
-        <div className="overflow-x-auto">
+        <div className="min-w-0 overflow-x-auto overflow-y-hidden pb-2">
           <TabsList variant="line" className="min-w-max">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="daily-updates">Daily Updates</TabsTrigger>
@@ -205,7 +224,7 @@ export default async function ProjectDetailPage({
               </CardHeader>
               <CardContent>
                 {latestUpdate ? (
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-4">
                     <KeyValue
                       label="Summary"
                       value={latestUpdate.progressSummary}
@@ -217,6 +236,10 @@ export default async function ProjectDetailPage({
                     <KeyValue
                       label="Next action"
                       value={latestUpdate.nextAction ?? "No next action"}
+                    />
+                    <KeyValue
+                      label="Attachments"
+                      value={`${mediaByDailyUpdateId.get(latestUpdate.id)?.length ?? 0}`}
                     />
                   </div>
                 ) : (
@@ -231,7 +254,18 @@ export default async function ProjectDetailPage({
         </TabsContent>
 
         <TabsContent value="daily-updates">
-          <DataCard title="Daily Updates" description="Latest PM reports.">
+          <DataCard
+            title="Daily Updates"
+            description="Latest PM reports."
+            action={
+              dailyUpdateOptions ? (
+                <DailyUpdateDialog
+                  options={dailyUpdateOptions}
+                  defaultProjectId={project.id}
+                />
+              ) : undefined
+            }
+          >
             {project.dailyUpdates.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -241,6 +275,7 @@ export default async function ProjectDetailPage({
                     <TableHead>Summary</TableHead>
                     <TableHead>Health</TableHead>
                     <TableHead>Progress</TableHead>
+                    <TableHead>Attachments</TableHead>
                     <TableHead>Next Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -253,18 +288,19 @@ export default async function ProjectDetailPage({
                         {update.progressSummary}
                       </TableCell>
                       <TableCell>
-                        {update.healthStatus ? (
-                          <Badge variant="secondary">
-                            {formatEnumLabel(update.healthStatus)}
-                          </Badge>
-                        ) : (
-                          "Not set"
-                        )}
+                        <DailyUpdateHealthBadge
+                          healthStatus={update.healthStatus}
+                        />
                       </TableCell>
                       <TableCell>
                         {update.progressPercentage !== null
                           ? `${update.progressPercentage}%`
                           : "Not set"}
+                      </TableCell>
+                      <TableCell className="min-w-52">
+                        <MediaLinks
+                          mediaAssets={mediaByDailyUpdateId.get(update.id) ?? []}
+                        />
                       </TableCell>
                       <TableCell className="min-w-64 text-muted-foreground">
                         {update.nextAction ?? "Not set"}
@@ -294,35 +330,66 @@ export default async function ProjectDetailPage({
                     <TableHead>Status</TableHead>
                     <TableHead>Approval</TableHead>
                     <TableHead>Due</TableHead>
+                    <TableHead>Files</TableHead>
                     <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {project.designTasks.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell className="font-medium">
-                        {task.taskName}
-                      </TableCell>
-                      <TableCell>{task.designer?.name ?? "Unassigned"}</TableCell>
-                      <TableCell>{formatEnumLabel(task.designType)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            task.status === "blocked"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {formatEnumLabel(task.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatEnumLabel(task.approvalStatus)}</TableCell>
-                      <TableCell>{formatDate(task.dueDate)}</TableCell>
-                      <TableCell className="min-w-64 text-muted-foreground">
-                        {task.notes ?? "No notes"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {project.designTasks.map((task) => {
+                    const taskMedia = mediaByDesignTaskId.get(task.id) ?? [];
+
+                    return (
+                      <TableRow key={task.id}>
+                        <TableCell className="font-medium">
+                          {task.taskName}
+                        </TableCell>
+                        <TableCell>{task.designer?.name ?? "Unassigned"}</TableCell>
+                        <TableCell>{formatEnumLabel(task.designType)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              task.status === "blocked"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {formatEnumLabel(task.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatEnumLabel(task.approvalStatus)}</TableCell>
+                        <TableCell>{formatDate(task.dueDate)}</TableCell>
+                        <TableCell className="min-w-56">
+                          {taskMedia.length > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              {taskMedia.slice(0, 2).map((asset) => (
+                                <a
+                                  key={asset.id}
+                                  href={asset.imagekitUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="truncate text-sm hover:underline"
+                                >
+                                  {asset.fileName}
+                                </a>
+                              ))}
+                              {taskMedia.length > 2 ? (
+                                <span className="text-xs text-muted-foreground">
+                                  +{taskMedia.length - 2} more files
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              No files
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="min-w-64 text-muted-foreground">
+                          {task.notes ?? "No notes"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ) : (
@@ -591,22 +658,64 @@ function KeyValue({
 function DataCard({
   title,
   description,
+  action,
   children,
 }: {
   title: string;
   description: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+          {action}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">{children}</div>
       </CardContent>
     </Card>
+  );
+}
+
+function MediaLinks({
+  mediaAssets,
+}: {
+  mediaAssets: Array<{
+    id: string;
+    fileName: string;
+    imagekitUrl: string;
+  }>;
+}) {
+  if (mediaAssets.length === 0) {
+    return <span className="text-muted-foreground">None</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {mediaAssets.slice(0, 2).map((asset) => (
+        <a
+          key={asset.id}
+          href={asset.imagekitUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="truncate text-sm hover:underline"
+        >
+          {asset.fileName}
+        </a>
+      ))}
+      {mediaAssets.length > 2 ? (
+        <span className="text-xs text-muted-foreground">
+          +{mediaAssets.length - 2} more
+        </span>
+      ) : null}
+    </div>
   );
 }
 
