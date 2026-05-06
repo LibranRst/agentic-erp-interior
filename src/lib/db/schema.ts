@@ -133,6 +133,7 @@ export const materialStatusEnum = pgEnum("material_status", [
 
 export const leadStatusEnum = pgEnum("lead_status", [
   "new",
+  "hot",
   "contacted",
   "consultation_scheduled",
   "proposal_sent",

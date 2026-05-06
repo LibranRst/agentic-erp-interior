@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { MediaUploader } from "@/components/shared/media-uploader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { UploadedMediaInput } from "@/src/features/media/schemas";
 import { toDateInputValue } from "@/src/features/projects/utils";
 import {
   createMaterialAction,
@@ -51,6 +54,13 @@ type MaterialFormValues = {
   unit?: string | null;
   etaDate?: string | Date | null;
   issueNotes?: string | null;
+  mediaAssets?: ExistingMaterialMedia[];
+};
+
+type ExistingMaterialMedia = {
+  id: string;
+  fileName: string;
+  imagekitUrl: string;
 };
 
 const initialState: MaterialActionState = {
@@ -71,6 +81,8 @@ export function MaterialForm({
       ? updateMaterialAction.bind(null, material.id)
       : createMaterialAction;
   const [state, formAction] = useActionState(action, initialState);
+  const [projectId, setProjectId] = useState(material?.projectId ?? "");
+  const [uploadedMedia, setUploadedMedia] = useState<UploadedMediaInput[]>([]);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -92,9 +104,10 @@ export function MaterialForm({
           <SelectField
             name="projectId"
             label="Project"
-            defaultValue={material?.projectId ?? ""}
+            defaultValue={projectId}
             placeholder="Select project"
             required
+            onValueChange={setProjectId}
             options={options.projects.map((project) => ({
               value: project.id,
               label: `${project.projectName} · ${project.clientName}`,
@@ -197,6 +210,24 @@ export function MaterialForm({
         </FieldGroup>
       </FieldSet>
 
+      <FieldSet>
+        <FieldGroup>
+          <MediaUploader
+            label="Material attachments"
+            description="Upload vendor confirmations, material photos, delivery proof, or issue evidence to ImageKit."
+            buttonLabel="Upload Files"
+            disabledDescription="Select a project before uploading material attachments."
+            relatedType="material"
+            projectId={projectId}
+            relatedId={material?.id}
+            value={uploadedMedia}
+            onChange={setUploadedMedia}
+            existingMedia={material?.mediaAssets ?? []}
+            accept="image/*,application/pdf"
+          />
+        </FieldGroup>
+      </FieldSet>
+
       <div className="flex justify-end gap-2">
         <SubmitButton mode={mode} />
       </div>
@@ -211,6 +242,7 @@ function SelectField({
   placeholder = "Select option",
   options,
   required = false,
+  onValueChange,
 }: {
   name: string;
   label: string;
@@ -218,11 +250,17 @@ function SelectField({
   placeholder?: string;
   options: Array<{ value: string; label: string }>;
   required?: boolean;
+  onValueChange?: (value: string) => void;
 }) {
   return (
     <Field>
       <FieldLabel>{label}</FieldLabel>
-      <Select name={name} defaultValue={defaultValue} required={required}>
+      <Select
+        name={name}
+        defaultValue={defaultValue}
+        required={required}
+        onValueChange={onValueChange}
+      >
         <SelectTrigger className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>

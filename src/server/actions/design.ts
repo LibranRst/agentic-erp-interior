@@ -21,6 +21,7 @@ import {
   requireUser,
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
+import { createMediaAssets } from "@/src/features/media/server";
 
 const designTaskIdSchema = z.uuid("Design task id is invalid.");
 
@@ -207,22 +208,13 @@ async function createDesignMediaAssets({
     return;
   }
 
-  await db.insert(schema.mediaAssets).values(
-    mediaAssets.map((asset) => ({
-      projectId,
-      relatedType: "design_task" as const,
-      relatedId: designTaskId,
-      fileName: asset.fileName,
-      fileType: asset.fileType ?? null,
-      mimeType: asset.mimeType ?? null,
-      fileSize: asset.fileSize ?? null,
-      imagekitFileId: asset.imagekitFileId,
-      imagekitUrl: asset.imagekitUrl,
-      thumbnailUrl: asset.thumbnailUrl ?? null,
-      folderPath: asset.folderPath ?? `dekoria-erp/projects/${projectId}/design`,
-      uploadedBy,
-    })),
-  );
+  await createMediaAssets({
+    mediaAssets,
+    projectId,
+    relatedType: "design_task",
+    relatedId: designTaskId,
+    uploadedBy,
+  });
 }
 
 function revalidateDesignPaths(projectId: string) {

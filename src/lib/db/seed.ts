@@ -691,7 +691,7 @@ async function seedSampleLeads(
       source: "Instagram Ads",
       interest: "Modern luxury kitchen and living room",
       estimatedProjectValue: "250000000",
-      status: "consultation_scheduled",
+      status: "hot",
       nextFollowUpDate: "2026-05-07",
       notes: "Interested in bold but warm luxury direction.",
     },
@@ -739,11 +739,7 @@ async function seedSampleLeads(
       where: eq(schema.leads.leadName, lead.leadName),
     });
 
-    if (existingLead) {
-      continue;
-    }
-
-    await db.insert(schema.leads).values({
+    const leadValues = {
       leadName: lead.leadName,
       phone: lead.phone,
       email: lead.email,
@@ -754,8 +750,18 @@ async function seedSampleLeads(
       assignedSalesId: sales.id,
       nextFollowUpDate: lead.nextFollowUpDate,
       notes: lead.notes,
-      convertedProjectId: lead.convertedProjectId,
-    });
+      convertedProjectId: lead.convertedProjectId ?? null,
+    } satisfies typeof schema.leads.$inferInsert;
+
+    if (existingLead) {
+      await db
+        .update(schema.leads)
+        .set(leadValues)
+        .where(eq(schema.leads.id, existingLead.id));
+      continue;
+    }
+
+    await db.insert(schema.leads).values(leadValues);
   }
 }
 

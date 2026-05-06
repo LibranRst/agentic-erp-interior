@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm";
 
 import { db, schema } from "@/src/lib/db";
+import { getMediaByRelatedIds } from "@/src/features/media/queries";
 
 import {
   MATERIAL_ISSUE_STATUSES,
@@ -28,7 +29,7 @@ export type MaterialIssueMetrics = Awaited<
 >;
 
 export async function getMaterialsQuery(filters: MaterialFilters = {}) {
-  return db.query.materials.findMany({
+  const materials = await db.query.materials.findMany({
     where: buildMaterialWhere(filters),
     with: {
       project: {
@@ -59,10 +60,12 @@ export async function getMaterialsQuery(filters: MaterialFilters = {}) {
       desc(materials.updatedAt),
     ],
   });
+
+  return attachMedia(materials);
 }
 
 export async function getMaterialIssuesQuery(limit = 6) {
-  return db.query.materials.findMany({
+  const materials = await db.query.materials.findMany({
     where: buildMaterialIssueWhere(),
     with: {
       project: {
@@ -95,6 +98,8 @@ export async function getMaterialIssuesQuery(limit = 6) {
     ],
     limit,
   });
+
+  return attachMedia(materials);
 }
 
 export async function getMaterialIssueMetrics() {
@@ -196,4 +201,18 @@ function buildMaterialIssueWhere() {
       ...MATERIAL_WARNING_URGENCY_LEVELS,
     ]),
   );
+}
+
+async function attachMedia<TMaterial extends { id: string }>(
+  materials: TMaterial[],
+) {
+  const mediaByMaterialId = await getMediaByRelatedIds(
+    "material",
+    materials.map((material) => material.id),
+  );
+
+  return materials.map((material) => ({
+    ...material,
+    mediaAssets: mediaByMaterialId.get(material.id) ?? [],
+  }));
 }

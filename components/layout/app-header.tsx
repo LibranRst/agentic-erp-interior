@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -70,6 +70,9 @@ function AppHeader({ user }: { user: CurrentUser }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="size-9 rounded-full p-0">
               <Avatar className="size-8">
+                {user.avatarUrl ? (
+                  <AvatarImage src={user.avatarUrl} alt={user.name} />
+                ) : null}
                 <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
               </Avatar>
             </Button>

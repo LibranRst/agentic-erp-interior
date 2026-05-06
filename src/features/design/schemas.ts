@@ -5,6 +5,10 @@ import {
   DESIGN_TASK_STATUSES,
   DESIGN_TYPES,
 } from "./constants";
+import {
+  parseMediaAssets,
+  uploadedMediaSchema,
+} from "@/src/features/media/schemas";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value === "string") {
@@ -55,16 +59,7 @@ const revisionCount = z.preprocess(
     .max(99, "Revision count is too high for MVP tracking."),
 );
 
-export const uploadedDesignMediaSchema = z.object({
-  fileName: z.string().trim().min(1).max(240),
-  fileType: z.string().trim().max(80).optional(),
-  mimeType: z.string().trim().max(120).optional(),
-  fileSize: z.number().int().positive().optional(),
-  imagekitFileId: z.string().trim().min(1).max(240),
-  imagekitUrl: z.url(),
-  thumbnailUrl: z.url().optional(),
-  folderPath: z.string().trim().max(500).optional(),
-});
+export const uploadedDesignMediaSchema = uploadedMediaSchema;
 
 export const designTaskMutationSchema = z.object({
   projectId: requiredUuid,
@@ -122,17 +117,4 @@ export function parseDesignTaskFormData(formData: FormData) {
     notes: formData.get("notes"),
     mediaAssets: parseMediaAssets(formData.get("mediaAssets")),
   });
-}
-
-function parseMediaAssets(value: FormDataEntryValue | null) {
-  if (typeof value !== "string" || value.trim() === "") {
-    return [];
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }

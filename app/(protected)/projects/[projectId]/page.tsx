@@ -9,6 +9,7 @@ import {
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
 import { MetricCard } from "@/components/shared/metric-card";
+import { ProjectDocumentationUploader } from "@/components/shared/project-documentation-uploader";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -547,6 +548,16 @@ export default async function ProjectDetailPage({
 
         <TabsContent value="media">
           <DataCard title="Media" description="ImageKit media linked to project.">
+            {canEdit ? (
+              <div className="mb-4">
+                <ProjectDocumentationUploader
+                  projectId={project.id}
+                  existingMedia={project.mediaAssets.filter(
+                    (asset) => asset.relatedType === "project_documentation",
+                  )}
+                />
+              </div>
+            ) : null}
             {project.mediaAssets.length > 0 ? (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {project.mediaAssets.map((asset) => (

@@ -220,6 +220,7 @@ export async function getUsersAndInvites() {
     db.query.users.findMany({
       with: {
         role: true,
+        avatar: true,
       },
       orderBy: (users, { asc }) => [asc(users.createdAt)],
     }),

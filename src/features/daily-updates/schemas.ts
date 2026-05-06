@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { DAILY_UPDATE_HEALTH_STATUSES } from "./constants";
+import {
+  parseMediaAssets,
+  uploadedMediaSchema,
+} from "@/src/features/media/schemas";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value === "string") {
@@ -50,16 +54,7 @@ const optionalProgressPercentage = z.preprocess(
     .optional(),
 );
 
-export const uploadedDailyUpdateMediaSchema = z.object({
-  fileName: z.string().trim().min(1).max(240),
-  fileType: z.string().trim().max(80).optional(),
-  mimeType: z.string().trim().max(120).optional(),
-  fileSize: z.number().int().positive().optional(),
-  imagekitFileId: z.string().trim().min(1).max(240),
-  imagekitUrl: z.url(),
-  thumbnailUrl: z.url().optional(),
-  folderPath: z.string().trim().max(500).optional(),
-});
+export const uploadedDailyUpdateMediaSchema = uploadedMediaSchema;
 
 export const dailyUpdateMutationSchema = z.object({
   projectId: requiredUuid,
@@ -116,17 +111,4 @@ export function parseDailyUpdateFormData(formData: FormData) {
     healthStatus: formData.get("healthStatus"),
     mediaAssets: parseMediaAssets(formData.get("mediaAssets")),
   });
-}
-
-function parseMediaAssets(value: FormDataEntryValue | null) {
-  if (typeof value !== "string" || value.trim() === "") {
-    return [];
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }

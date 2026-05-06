@@ -20,6 +20,7 @@ import {
   requireUser,
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
+import { createMediaAssets } from "@/src/features/media/server";
 
 const materialIdSchema = z.uuid("Material id is invalid.");
 
@@ -72,6 +73,14 @@ export async function createMaterialAction(
     };
   }
 
+  await createMediaAssets({
+    mediaAssets: parsed.data.mediaAssets,
+    projectId: material.projectId,
+    relatedType: "material",
+    relatedId: material.id,
+    uploadedBy: currentUser.id,
+  });
+
   revalidateMaterialPaths(material.projectId);
 
   return {
@@ -122,6 +131,14 @@ export async function updateMaterialAction(
       message: "Material issue was not found.",
     };
   }
+
+  await createMediaAssets({
+    mediaAssets: parsed.data.mediaAssets,
+    projectId: material.projectId,
+    relatedType: "material",
+    relatedId: material.id,
+    uploadedBy: currentUser.id,
+  });
 
   revalidateMaterialPaths(material.projectId);
 

@@ -22,6 +22,13 @@
       "when": 1778082849813,
       "tag": "0002_striped_ego",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778099843135,
+      "tag": "0003_perfect_nico_minoru",
+      "breakpoints": true
     }
   ]
 }

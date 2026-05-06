@@ -4,6 +4,10 @@ import {
   MATERIAL_STATUSES,
   MATERIAL_URGENCY_LEVELS,
 } from "./constants";
+import {
+  parseMediaAssets,
+  uploadedMediaSchema,
+} from "@/src/features/media/schemas";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value === "string") {
@@ -69,6 +73,7 @@ export const materialMutationSchema = z.object({
   unit: optionalText(40),
   etaDate: optionalDate,
   issueNotes: optionalText(1200),
+  mediaAssets: z.array(uploadedMediaSchema).default([]),
 });
 
 export const materialFiltersSchema = z.object({
@@ -83,6 +88,7 @@ export const materialFiltersSchema = z.object({
 });
 
 export type MaterialMutationInput = z.infer<typeof materialMutationSchema>;
+export type UploadedMaterialMediaInput = z.infer<typeof uploadedMediaSchema>;
 export type MaterialFilters = z.infer<typeof materialFiltersSchema>;
 
 export type MaterialActionState = {
@@ -102,5 +108,6 @@ export function parseMaterialFormData(formData: FormData) {
     unit: formData.get("unit"),
     etaDate: formData.get("etaDate"),
     issueNotes: formData.get("issueNotes"),
+    mediaAssets: parseMediaAssets(formData.get("mediaAssets")),
   });
 }

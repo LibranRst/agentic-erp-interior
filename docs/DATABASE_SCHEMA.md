@@ -332,6 +332,7 @@ Lead status:
 
 ```txt
 new
+hot
 contacted
 consultation_scheduled
 proposal_sent

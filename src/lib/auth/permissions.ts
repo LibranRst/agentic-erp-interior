@@ -123,6 +123,7 @@ export type CurrentUser = {
   name: string;
   email: string;
   role: RoleName;
+  avatarUrl?: string | null;
 };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -138,6 +139,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     where: eq(schema.users.authUserId, session.user.id),
     with: {
       role: true,
+      avatar: true,
     },
   });
 
@@ -151,6 +153,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     name: user.name,
     email: user.email,
     role: user.role.name,
+    avatarUrl: user.avatar?.imagekitUrl ?? null,
   };
 }
 

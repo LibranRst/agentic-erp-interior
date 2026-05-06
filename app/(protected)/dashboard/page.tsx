@@ -2,7 +2,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AiGenerativeIcon,
   ChartUpIcon,
-  FileImageIcon,
   Folder01Icon,
   PackageIcon,
   PaintBoardIcon,
@@ -32,11 +31,16 @@ import {
   DesignTaskStatusBadge,
   DesignTypeBadge,
 } from "@/src/features/design/components/design-badges"
+import {
+  ContentOpportunityBadge,
+  ContentStatusBadge,
+} from "@/src/features/content/components/content-badges"
 import { DailyUpdateHealthBadge } from "@/src/features/daily-updates/components/daily-update-badges"
 import {
   MaterialStatusBadge,
   MaterialUrgencyBadge,
 } from "@/src/features/materials/components/material-badges"
+import { LeadStatusBadge } from "@/src/features/leads/components/lead-badges"
 import {
   getDesignTaskMetrics,
   getPendingDesignTasksQuery,
@@ -45,6 +49,11 @@ import { getMaterialIssueMetrics } from "@/src/features/materials/queries"
 import { getProjectMetrics } from "@/src/features/projects/queries"
 import { formatDate } from "@/src/features/projects/utils"
 import { getLatestDailyUpdates } from "@/src/server/actions/daily-updates"
+import {
+  getDashboardLeads,
+  getSalesSnapshot,
+} from "@/src/server/actions/leads"
+import { getContentReadyProjects } from "@/src/server/actions/content"
 import { getMaterialIssues } from "@/src/server/actions/materials"
 
 const projectRows = [
@@ -69,11 +78,6 @@ const snapshotCards = [
     description: "11 new leads this week",
     icon: ShoppingBag03Icon,
   },
-  {
-    title: "Content Readiness",
-    description: "6 projects ready to capture",
-    icon: FileImageIcon,
-  },
 ]
 
 export default async function DashboardPage() {
@@ -81,16 +85,22 @@ export default async function DashboardPage() {
     projectMetrics,
     designMetrics,
     materialMetrics,
+    salesMetrics,
     pendingDesignTasks,
     latestDailyUpdates,
     materialIssues,
+    dashboardLeads,
+    contentReadyProjects,
   ] = await Promise.all([
     getProjectMetrics(),
     getDesignTaskMetrics(),
     getMaterialIssueMetrics(),
+    getSalesSnapshot(),
     getPendingDesignTasksQuery(4),
     getLatestDailyUpdates(4),
     getMaterialIssues(4),
+    getDashboardLeads(4),
+    getContentReadyProjects(4),
   ])
 
   const metrics = [
@@ -131,16 +141,15 @@ export default async function DashboardPage() {
     },
     {
       title: "New Leads",
-      value: "11",
+      value: salesMetrics.new.toString(),
       description: "Fresh sales opportunities",
-      badge: "5 hot",
+      badge: salesMetrics.hot > 0 ? `${salesMetrics.hot} hot` : undefined,
       icon: ShoppingBag03Icon,
     },
     {
       title: "Content Ready",
       value: projectMetrics.contentReady.toString(),
       description: "Projects ready for capture",
-      icon: FileImageIcon,
     },
   ]
 
@@ -154,6 +163,11 @@ export default async function DashboardPage() {
         ? {
             ...card,
             description: `${materialMetrics.delayed} delayed, ${materialMetrics.high + materialMetrics.critical} high or critical`,
+          }
+      : card.title === "Sales Snapshot"
+        ? {
+            ...card,
+            description: `${salesMetrics.new} new, ${salesMetrics.hot} hot, ${salesMetrics.followUp} follow-up due`,
           }
       : card,
   )
@@ -360,11 +374,54 @@ export default async function DashboardPage() {
               )}
             </CardContent>
           </Card>
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Content Readiness</CardTitle>
+              <CardDescription>
+                Projects with shoot, footage, or publishing opportunities.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {contentReadyProjects.length > 0 ? (
+                contentReadyProjects.map((asset) => (
+                  <div key={asset.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {asset.project.projectName}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {asset.roomArea ?? "General"} · {asset.project.clientName}
+                        </div>
+                      </div>
+                      <ContentStatusBadge status={asset.contentStatus} />
+                    </div>
+                    <div className="line-clamp-2 text-sm text-muted-foreground">
+                      {asset.suggestedAngle ?? "No suggested angle recorded yet."}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ContentOpportunityBadge
+                        opportunity={asset.contentOpportunity}
+                      />
+                      <Badge variant="secondary">
+                        {asset.mediaAssets.length} media
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                  No content-ready projects yet.
+                </div>
+              )}
+            </CardContent>
+          </Card>
           {dashboardSnapshotCards
             .filter(
               (card) =>
                 card.title !== "Design Status Snapshot" &&
-                card.title !== "Material Warning Snapshot",
+                card.title !== "Material Warning Snapshot" &&
+                card.title !== "Sales Snapshot",
             )
             .map(({ title, description, icon }) => (
               <Card key={title} size="sm">
@@ -378,6 +435,50 @@ export default async function DashboardPage() {
                 </CardContent>
               </Card>
             ))}
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Sales Snapshot</CardTitle>
+              <CardDescription>
+                New, hot, and follow-up leads requiring sales attention.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {dashboardLeads.length > 0 ? (
+                dashboardLeads.map((lead) => (
+                  <div key={lead.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {lead.leadName}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {lead.assignedSales?.name ?? "Unassigned"} · {lead.source ?? "Source not set"}
+                        </div>
+                      </div>
+                      <LeadStatusBadge status={lead.status} />
+                    </div>
+                    <div className="line-clamp-2 text-sm text-muted-foreground">
+                      {lead.interest ?? lead.notes ?? "No interest recorded yet."}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">
+                        Follow-up {formatDate(lead.nextFollowUpDate)}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {lead.estimatedProjectValue
+                          ? `Rp ${Number(lead.estimatedProjectValue).toLocaleString("id-ID")}`
+                          : "Value not set"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                  No new, hot, or due follow-up leads.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </PageContainer>

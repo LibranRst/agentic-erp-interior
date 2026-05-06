@@ -1,4 +1,5 @@
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import { UserAvatarUploader } from "@/components/shared/user-avatar-uploader";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -46,6 +47,7 @@ export default async function UsersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Avatar</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
@@ -55,6 +57,9 @@ export default async function UsersPage() {
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id}>
+                      <TableCell className="min-w-80">
+                        <UserAvatarUploader user={user} />
+                      </TableCell>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{formatRoleLabel(user.role.name)}</TableCell>

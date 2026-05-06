@@ -705,13 +705,14 @@ Data fields:
 Lead status:
 
 - New
-- Contacted
-- Warm
 - Hot
-- Survey Scheduled
+- Contacted
+- Consultation Scheduled
 - Proposal Sent
-- Deal
+- Negotiation
+- Converted
 - Lost
+- Cold
 
 Functional requirements:
 

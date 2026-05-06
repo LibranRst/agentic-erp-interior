@@ -23,6 +23,7 @@ import {
   requireUser,
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
+import { createMediaAssets } from "@/src/features/media/server";
 
 export async function getDailyUpdates(filters: unknown = {}) {
   const currentUser = await requireUser();
@@ -191,23 +192,13 @@ async function createDailyUpdateMediaAssets({
     return;
   }
 
-  await db.insert(schema.mediaAssets).values(
-    mediaAssets.map((asset) => ({
-      projectId,
-      relatedType: "daily_update" as const,
-      relatedId: dailyUpdateId,
-      fileName: asset.fileName,
-      fileType: asset.fileType ?? null,
-      mimeType: asset.mimeType ?? null,
-      fileSize: asset.fileSize ?? null,
-      imagekitFileId: asset.imagekitFileId,
-      imagekitUrl: asset.imagekitUrl,
-      thumbnailUrl: asset.thumbnailUrl ?? null,
-      folderPath:
-        asset.folderPath ?? `dekoria-erp/projects/${projectId}/daily-updates`,
-      uploadedBy,
-    })),
-  );
+  await createMediaAssets({
+    mediaAssets,
+    projectId,
+    relatedType: "daily_update",
+    relatedId: dailyUpdateId,
+    uploadedBy,
+  });
 }
 
 function revalidateDailyUpdatePaths(projectId: string) {

@@ -542,6 +542,7 @@ flowchart TD
 
 ```txt
 New Lead
+Hot
 Contacted
 Consultation Scheduled
 Consultation Done
