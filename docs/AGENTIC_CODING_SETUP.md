@@ -36,6 +36,12 @@ OpenCode:
 - must follow AGENTS.md and relevant skills
 - must not replace curated instructions blindly
 
+Gemini CLI:
+- additional fallback for long-context planning, repo review, research-heavy tasks, and documentation
+- preferred for terminal-based coding assistance and complex multi-file planning
+- must follow AGENTS.md, GEMINI.md, and relevant skills
+- always uses Plan Mode by default in this repository
+
 ## Official Skills
 
 ### shadcn/ui
@@ -191,6 +197,59 @@ Return:
 - commands run
 - verification result
 - blockers
+```
+
+## Gemini CLI Usage
+
+### Installation
+
+Install Gemini CLI only from official sources:
+
+```bash
+# Option 1: Run once
+npx @google/gemini-cli
+
+# Option 2: Global install via npm
+npm install -g @google/gemini-cli
+
+# Option 3: Install via Homebrew
+brew install gemini-cli
+```
+
+**Warning:** Avoid fake "early access" Gemini CLI links. Only use official @google packages or the official Homebrew formula.
+
+### Configuration
+
+Gemini CLI is configured via `.gemini/settings.json`. It is set to **Plan Mode** by default.
+
+### Usage Patterns
+
+Gemini CLI excels at:
+- **Planning:** Analyzing PRD and technical docs to create implementation plans.
+- **Review:** Auditing existing code against AGENTS.md rules.
+- **Refactoring:** Planning cross-file changes.
+- **Research:** Searching the codebase for patterns or debt.
+
+Example prompt pattern for Gemini CLI:
+
+```text
+Activate skills:
+- dekoria-project-architect
+- <relevant skill>
+
+Read context:
+- AGENTS.md
+- docs/PRD.md
+- docs/FLOWS.md
+- <relevant file>
+
+Task:
+<complex planning or research task>
+
+Constraints:
+- Stay within MVP boundaries.
+- No YOLO mode.
+- Use Plan Mode.
 ```
 
 ## Bun Rules

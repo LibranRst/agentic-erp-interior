@@ -61,6 +61,63 @@ Return:
 
 When using OpenCode, run `opencode` from the project root, use Plan mode before Build mode for bigger tasks, and reference docs with `@` file mentions such as `@AGENTS.md` and `@docs/PRD.md`.
 
+When using Gemini CLI, activate relevant skills first and ensure it reads `GEMINI.md` (which imports `AGENTS.md`). Gemini CLI is best for the **Research** and **Strategy** phases of the development lifecycle.
+
+## Gemini CLI Prompt Templates
+
+### Multi-File Architectural Review
+
+```text
+Activate skills:
+- dekoria-project-architect
+- dekoria-quality-review
+
+Task:
+Review the current implementation of <module> against docs/PRD.md and AGENTS.md.
+
+Read:
+- docs/PRD.md
+- docs/FLOWS.md
+- <relevant folder path>
+
+Identify:
+- Architectural drift from MVP.
+- Inconsistent UI patterns.
+- Missing permission checks.
+- Type safety issues.
+
+Return:
+- Structural analysis report.
+- Recommended refactoring plan.
+```
+
+### Complex Implementation Planning
+
+```text
+Activate skills:
+- dekoria-project-architect
+- dekoria-db-drizzle
+- dekoria-ui-builder
+
+Task:
+Create a detailed implementation plan for Phase <N>.
+
+Read:
+- docs/PRD.md
+- docs/DATABASE_SCHEMA.md
+- docs/API_ACTIONS.md
+
+Plan:
+- Schema updates.
+- Server action signatures.
+- UI component composition.
+- Verification steps.
+
+Constraints:
+- Must follow AGENTS.md.
+- Must stay within MVP.
+```
+
 ## Bad Prompt Example
 
 "Build the ERP app."
