@@ -1,6 +1,9 @@
 import { ModulePage } from "@/components/shared/module-page"
+import { requirePageRole } from "@/src/lib/auth/permissions"
 
-export default function DailyUpdatesPage() {
+export default async function DailyUpdatesPage() {
+  await requirePageRole(["owner", "admin", "project_manager"])
+
   return (
     <ModulePage
       title="Daily Updates"

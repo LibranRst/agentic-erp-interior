@@ -3,7 +3,7 @@
 import { BellDotIcon, Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -15,12 +15,23 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { authClient } from "@/lib/auth-client"
 import { appNavItems } from "@/lib/navigation"
+import type { CurrentUser } from "@/src/lib/auth/permissions"
 
-function AppHeader() {
+function AppHeader({ user }: { user: CurrentUser }) {
   const pathname = usePathname()
+  const router = useRouter()
   const currentPage = getCurrentPage(pathname)
 
   return (
@@ -55,9 +66,33 @@ function AppHeader() {
         <Button variant="ghost" size="icon-sm" aria-label="Notifications">
           <HugeiconsIcon icon={BellDotIcon} strokeWidth={2} />
         </Button>
-        <Avatar className="size-8">
-          <AvatarFallback>DL</AvatarFallback>
-        </Avatar>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="size-9 rounded-full p-0">
+              <Avatar className="size-8">
+                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <span className="block truncate">{user.name}</span>
+              <span className="block truncate text-xs font-normal text-muted-foreground">
+                {user.email}
+              </span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={async () => {
+                await authClient.signOut()
+                router.push("/login")
+                router.refresh()
+              }}
+            >
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )
@@ -69,6 +104,15 @@ function getCurrentPage(pathname: string) {
       (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
     ) ?? appNavItems[0]
   )
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
 }
 
 export { AppHeader }

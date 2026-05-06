@@ -1,6 +1,9 @@
 import { ModulePage } from "@/components/shared/module-page"
+import { requirePageRole } from "@/src/lib/auth/permissions"
 
-export default function AiSummaryPage() {
+export default async function AiSummaryPage() {
+  await requirePageRole(["owner", "admin"])
+
   return (
     <ModulePage
       title="AI Summary"

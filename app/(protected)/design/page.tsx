@@ -1,6 +1,9 @@
 import { ModulePage } from "@/components/shared/module-page"
+import { requirePageRole } from "@/src/lib/auth/permissions"
 
-export default function DesignPage() {
+export default async function DesignPage() {
+  await requirePageRole(["owner", "admin", "designer"])
+
   return (
     <ModulePage
       title="Design / DED Tracker"

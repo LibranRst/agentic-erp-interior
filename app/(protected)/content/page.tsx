@@ -1,6 +1,9 @@
 import { ModulePage } from "@/components/shared/module-page"
+import { requirePageRole } from "@/src/lib/auth/permissions"
 
-export default function ContentPage() {
+export default async function ContentPage() {
+  await requirePageRole(["owner", "admin", "marketing"])
+
   return (
     <ModulePage
       title="Content"

@@ -13,6 +13,7 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import { adminNavItems, operationsNavItems } from "@/lib/navigation"
+import type { CurrentUser, RoleName } from "@/src/lib/auth/permissions"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,8 +64,14 @@ type Workspace = {
   plan: string
 }
 
-function AppSidebar() {
+function AppSidebar({ user }: { user: CurrentUser }) {
   const pathname = usePathname()
+  const visibleOperationsItems = operationsNavItems.filter((item) =>
+    canRoleAccess(user.role, item.allowedRoles),
+  )
+  const visibleAdminItems = adminNavItems.filter((item) =>
+    canRoleAccess(user.role, item.allowedRoles),
+  )
 
   return (
     <Sidebar collapsible="icon">
@@ -76,7 +83,7 @@ function AppSidebar() {
           <SidebarGroupLabel>Operations</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {operationsNavItems.map((item) => (
+              {visibleOperationsItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
@@ -93,32 +100,37 @@ function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarGroupLabel>Admin</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminNavItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActivePath(pathname, item.href)}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.href}>
-                      <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleAdminItems.length > 0 ? (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Admin</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleAdminItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActivePath(pathname, item.href)}
+                        tooltip={item.title}
+                      >
+                        <Link href={item.href}>
+                          <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        ) : null}
       </SidebarContent>
       <SidebarFooter>
         <div className="rounded-xl bg-sidebar-accent px-3 py-2 text-xs text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
-          MVP focus: visibility, tracking, reporting, and actionable AI.
+          <div className="font-medium">{user.name}</div>
+          <div className="text-muted-foreground">{formatRoleLabel(user.role)}</div>
         </div>
       </SidebarFooter>
       <SidebarRail />
@@ -205,6 +217,17 @@ function WorkspaceSwitcher({ workspaces }: { workspaces: Workspace[] }) {
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+function canRoleAccess(role: RoleName, allowedRoles: readonly RoleName[]) {
+  return allowedRoles.includes(role)
+}
+
+function formatRoleLabel(role: RoleName) {
+  return role
+    .split("_")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ")
 }
 
 export { AppSidebar }

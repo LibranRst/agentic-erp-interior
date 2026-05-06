@@ -8,13 +8,20 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar"
+import type { CurrentUser } from "@/src/lib/auth/permissions"
 
-function AppShell({ children }: { children: React.ReactNode }) {
+function AppShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode
+  user: CurrentUser
+}) {
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={user} />
       <SidebarInset>
-        <AppHeader />
+        <AppHeader user={user} />
         <div className="flex flex-1 flex-col">{children}</div>
       </SidebarInset>
     </SidebarProvider>
