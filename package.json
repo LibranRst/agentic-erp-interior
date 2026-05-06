@@ -10,6 +10,8 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
+    "mastra:dev": "mastra dev",
+    "mastra:build": "mastra build",
     "db:generate": "bun --env-file=.env.local drizzle-kit generate",
     "db:migrate": "bun --env-file=.env.local drizzle-kit migrate",
     "db:push": "bun --env-file=.env.local drizzle-kit push",
@@ -17,9 +19,11 @@
     "db:seed": "bun --env-file=.env.local src/lib/db/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.67",
     "@better-auth/drizzle-adapter": "^1.6.9",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
+    "@mastra/core": "^1.32.1",
     "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.6.9",
     "class-variance-authority": "^0.7.1",
@@ -47,6 +51,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.1.7",
+    "mastra": "^1.8.1",
     "postcss": "^8",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",

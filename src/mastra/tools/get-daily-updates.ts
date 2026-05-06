@@ -1,0 +1,60 @@
+import { createTool } from "@mastra/core/tools";
+import { desc } from "drizzle-orm";
+
+import { db, schema } from "@/src/lib/db";
+
+import { boundedLimitSchema, dailyUpdateSchema } from "./schemas";
+import { clampLimit, READ_ONLY_TOOL_ANNOTATIONS, toDateOnly } from "./utils";
+
+export const getLatestDailyUpdatesTool = createTool({
+  id: "get-latest-daily-updates",
+  description:
+    "Fetch recent PM daily updates through safe Drizzle queries, without exposing raw contact data.",
+  inputSchema: boundedLimitSchema,
+  outputSchema: dailyUpdateSchema.array(),
+  mcp: {
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
+  },
+  execute: async (input) => getLatestDailyUpdates(input),
+});
+
+export async function getLatestDailyUpdates(input: { limit?: number } = {}) {
+  const limit = clampLimit(input.limit);
+
+  const updates = await db.query.dailyUpdates.findMany({
+    columns: {
+      id: true,
+      updateDate: true,
+      progressSummary: true,
+      workCompleted: true,
+      issueNotes: true,
+      blockerNotes: true,
+      nextAction: true,
+      progressPercentage: true,
+      healthStatus: true,
+    },
+    with: {
+      project: {
+        columns: {
+          id: true,
+          projectName: true,
+          clientName: true,
+        },
+      },
+      updater: {
+        columns: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [desc(schema.dailyUpdates.updateDate), desc(schema.dailyUpdates.createdAt)],
+    limit,
+  });
+
+  return updates.map((update) => ({
+    ...update,
+    updateDate: toDateOnly(update.updateDate) ?? "",
+    updater: update.updater ? { ...update.updater, role: null } : null,
+  }));
+}
