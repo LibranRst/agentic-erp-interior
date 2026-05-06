@@ -1,9 +1,13 @@
-"use client";
+"use client"
 
-import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { FilterHorizontalIcon } from "@hugeicons/core-free-icons"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -11,141 +15,203 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 
 import {
   MATERIAL_STATUSES,
   MATERIAL_URGENCY_LEVELS,
   materialStatusLabels,
   materialUrgencyLabels,
-} from "../constants";
-import type { MaterialFormOptions } from "../queries";
-import type { MaterialFilters } from "../schemas";
+} from "../constants"
+import type { MaterialFormOptions } from "../queries"
+import type { MaterialFilters as MaterialFiltersValue } from "../schemas"
 
 export function MaterialFilters({
   filters,
   options,
 }: {
-  filters: MaterialFilters;
-  options: MaterialFormOptions;
+  filters: MaterialFiltersValue
+  options: MaterialFormOptions
 }) {
-  const router = useRouter();
+  const router = useRouter()
+  const pathname = usePathname()
+  const [isPending, startTransition] = useTransition()
+  const [values, setValues] = useState({
+    search: filters.search ?? "",
+    projectId: filters.projectId ?? "all",
+    vendorId: filters.vendorId ?? "all",
+    status: filters.status ?? "all",
+    urgencyLevel: filters.urgencyLevel ?? "all",
+  })
 
-  function applyFilters(formData: FormData) {
-    const params = new URLSearchParams();
+  const selectOptions = useMemo(
+    () => ({
+      projectId: options.projects.map((project) => ({
+        value: project.id,
+        label: project.projectName,
+      })),
+      vendorId: options.vendors.map((vendor) => ({
+        value: vendor.id,
+        label: vendor.vendorName,
+      })),
+      status: MATERIAL_STATUSES.map((status) => ({
+        value: status,
+        label: materialStatusLabels[status],
+      })),
+      urgencyLevel: MATERIAL_URGENCY_LEVELS.map((urgencyLevel) => ({
+        value: urgencyLevel,
+        label: materialUrgencyLabels[urgencyLevel],
+      })),
+    }),
+    [options.projects, options.vendors]
+  )
 
-    for (const key of [
-      "search",
-      "projectId",
-      "vendorId",
-      "status",
-      "urgencyLevel",
-    ]) {
-      const value = formData.get(key);
+  function applyFilters(nextValues = values) {
+    const params = new URLSearchParams()
 
-      if (
-        typeof value === "string" &&
-        value.trim() !== "" &&
-        value !== "all"
-      ) {
-        params.set(key, value);
+    for (const [key, value] of Object.entries(nextValues)) {
+      const trimmedValue = value.trim()
+
+      if (trimmedValue && trimmedValue !== "all") {
+        params.set(key, trimmedValue)
       }
     }
 
-    router.push(
-      params.size > 0 ? `/materials?${params.toString()}` : "/materials",
-    );
+    const query = params.toString()
+
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      })
+    })
+  }
+
+  function updateSelect(name: keyof typeof values, value: string) {
+    const nextValues = {
+      ...values,
+      [name]: value,
+    }
+
+    setValues(nextValues)
+    applyFilters(nextValues)
+  }
+
+  function resetFilters() {
+    const nextValues = {
+      search: "",
+      projectId: "all",
+      vendorId: "all",
+      status: "all",
+      urgencyLevel: "all",
+    }
+
+    setValues(nextValues)
+    startTransition(() => {
+      router.replace(pathname, { scroll: false })
+    })
   }
 
   return (
-    <form action={applyFilters} className="flex flex-col gap-3 lg:flex-row">
-      <Input
-        name="search"
-        aria-label="Search materials"
-        placeholder="Search materials, category, notes..."
-        defaultValue={filters.search ?? ""}
-        className="lg:max-w-72"
-      />
-      <FilterSelect
-        name="projectId"
-        placeholder="All projects"
-        defaultValue={filters.projectId ?? "all"}
-        options={[
-          { value: "all", label: "All projects" },
-          ...options.projects.map((project) => ({
-            value: project.id,
-            label: project.projectName,
-          })),
-        ]}
-      />
-      <FilterSelect
-        name="vendorId"
-        placeholder="All vendors"
-        defaultValue={filters.vendorId ?? "all"}
-        options={[
-          { value: "all", label: "All vendors" },
-          ...options.vendors.map((vendor) => ({
-            value: vendor.id,
-            label: vendor.vendorName,
-          })),
-        ]}
-      />
-      <FilterSelect
-        name="status"
-        placeholder="All statuses"
-        defaultValue={filters.status ?? "all"}
-        options={[
-          { value: "all", label: "All statuses" },
-          ...MATERIAL_STATUSES.map((status) => ({
-            value: status,
-            label: materialStatusLabels[status],
-          })),
-        ]}
-      />
-      <FilterSelect
-        name="urgencyLevel"
-        placeholder="All urgency"
-        defaultValue={filters.urgencyLevel ?? "all"}
-        options={[
-          { value: "all", label: "All urgency" },
-          ...MATERIAL_URGENCY_LEVELS.map((urgencyLevel) => ({
-            value: urgencyLevel,
-            label: materialUrgencyLabels[urgencyLevel],
-          })),
-        ]}
-      />
-      <Button type="submit" variant="outline">
-        Apply
-      </Button>
+    <form
+      className="rounded-2xl border bg-card p-4"
+      onSubmit={(event) => {
+        event.preventDefault()
+        applyFilters()
+      }}
+    >
+      <FieldGroup className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <Field className="md:col-span-2 xl:col-span-2">
+          <FieldLabel htmlFor="search">Search</FieldLabel>
+          <Input
+            id="search"
+            name="search"
+            value={values.search}
+            placeholder="Search materials..."
+            onChange={(event) =>
+              setValues((currentValues) => ({
+                ...currentValues,
+                search: event.target.value,
+              }))
+            }
+          />
+        </Field>
+        <FilterSelect
+          name="projectId"
+          label="Project"
+          value={values.projectId}
+          options={selectOptions.projectId}
+          onValueChange={(value) => updateSelect("projectId", value)}
+        />
+        <FilterSelect
+          name="vendorId"
+          label="Vendor"
+          value={values.vendorId}
+          options={selectOptions.vendorId}
+          onValueChange={(value) => updateSelect("vendorId", value)}
+        />
+        <FilterSelect
+          name="status"
+          label="Status"
+          value={values.status}
+          options={selectOptions.status}
+          onValueChange={(value) => updateSelect("status", value)}
+        />
+        <FilterSelect
+          name="urgencyLevel"
+          label="Urgency"
+          value={values.urgencyLevel}
+          options={selectOptions.urgencyLevel}
+          onValueChange={(value) => updateSelect("urgencyLevel", value)}
+        />
+        <div className="flex items-end gap-2 md:col-span-2 xl:col-span-6">
+          <Button type="submit" disabled={isPending}>
+            <HugeiconsIcon
+              icon={FilterHorizontalIcon}
+              strokeWidth={2}
+              data-icon="inline-start"
+            />
+            {isPending ? "Filtering..." : "Apply Filters"}
+          </Button>
+          <Button type="button" variant="outline" onClick={resetFilters}>
+            Reset
+          </Button>
+        </div>
+      </FieldGroup>
     </form>
-  );
+  )
 }
 
 function FilterSelect({
   name,
-  placeholder,
-  defaultValue,
+  label,
+  value,
   options,
+  onValueChange,
 }: {
-  name: string;
-  placeholder: string;
-  defaultValue: string;
-  options: Array<{ value: string; label: string }>;
+  name: string
+  label: string
+  value: string
+  options: Array<{ value: string; label: string }>
+  onValueChange: (value: string) => void
 }) {
   return (
-    <Select name={name} defaultValue={defaultValue}>
-      <SelectTrigger className="w-full lg:w-44">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
+    <Field>
+      <FieldLabel>{label}</FieldLabel>
+      <Select name={name} value={value} onValueChange={onValueChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={`All ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All {label.toLowerCase()}</SelectItem>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
+  )
 }

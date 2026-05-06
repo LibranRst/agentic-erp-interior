@@ -1,9 +1,13 @@
-"use client";
+"use client"
 
-import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { FilterHorizontalIcon } from "@hugeicons/core-free-icons"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -11,7 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 
 import {
   DESIGN_APPROVAL_STATUSES,
@@ -20,145 +24,209 @@ import {
   designApprovalStatusLabels,
   designTaskStatusLabels,
   designTypeLabels,
-} from "../constants";
-import type { DesignTaskFormOptions } from "../queries";
-import type { DesignTaskFilters } from "../schemas";
+} from "../constants"
+import type { DesignTaskFormOptions } from "../queries"
+import type { DesignTaskFilters as DesignTaskFiltersValue } from "../schemas"
 
 export function DesignTaskFilters({
   filters,
   options,
 }: {
-  filters: DesignTaskFilters;
-  options: DesignTaskFormOptions;
+  filters: DesignTaskFiltersValue
+  options: DesignTaskFormOptions
 }) {
-  const router = useRouter();
+  const router = useRouter()
+  const pathname = usePathname()
+  const [isPending, startTransition] = useTransition()
+  const [values, setValues] = useState({
+    search: filters.search ?? "",
+    projectId: filters.projectId ?? "all",
+    designerId: filters.designerId ?? "all",
+    designType: filters.designType ?? "all",
+    status: filters.status ?? "all",
+    approvalStatus: filters.approvalStatus ?? "all",
+  })
 
-  function applyFilters(formData: FormData) {
-    const params = new URLSearchParams();
+  const selectOptions = useMemo(
+    () => ({
+      projectId: options.projects.map((project) => ({
+        value: project.id,
+        label: project.projectName,
+      })),
+      designerId: options.designers.map((designer) => ({
+        value: designer.id,
+        label: designer.name,
+      })),
+      designType: DESIGN_TYPES.map((designType) => ({
+        value: designType,
+        label: designTypeLabels[designType],
+      })),
+      status: DESIGN_TASK_STATUSES.map((status) => ({
+        value: status,
+        label: designTaskStatusLabels[status],
+      })),
+      approvalStatus: DESIGN_APPROVAL_STATUSES.map((approvalStatus) => ({
+        value: approvalStatus,
+        label: designApprovalStatusLabels[approvalStatus],
+      })),
+    }),
+    [options.projects, options.designers]
+  )
 
-    for (const key of [
-      "search",
-      "projectId",
-      "designerId",
-      "designType",
-      "status",
-      "approvalStatus",
-    ]) {
-      const value = formData.get(key);
+  function applyFilters(nextValues = values) {
+    const params = new URLSearchParams()
 
-      if (
-        typeof value === "string" &&
-        value.trim() !== "" &&
-        value !== "all"
-      ) {
-        params.set(key, value);
+    for (const [key, value] of Object.entries(nextValues)) {
+      const trimmedValue = value.trim()
+
+      if (trimmedValue && trimmedValue !== "all") {
+        params.set(key, trimmedValue)
       }
     }
 
-    router.push(params.size > 0 ? `/design?${params.toString()}` : "/design");
+    const query = params.toString()
+
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      })
+    })
+  }
+
+  function updateSelect(name: keyof typeof values, value: string) {
+    const nextValues = {
+      ...values,
+      [name]: value,
+    }
+
+    setValues(nextValues)
+    applyFilters(nextValues)
+  }
+
+  function resetFilters() {
+    const nextValues = {
+      search: "",
+      projectId: "all",
+      designerId: "all",
+      designType: "all",
+      status: "all",
+      approvalStatus: "all",
+    }
+
+    setValues(nextValues)
+    startTransition(() => {
+      router.replace(pathname, { scroll: false })
+    })
   }
 
   return (
-    <form action={applyFilters} className="flex flex-col gap-3 lg:flex-row">
-      <Input
-        name="search"
-        aria-label="Search design tasks"
-        placeholder="Search tasks or notes..."
-        defaultValue={filters.search ?? ""}
-        className="lg:max-w-64"
-      />
-      <FilterSelect
-        name="projectId"
-        placeholder="All projects"
-        defaultValue={filters.projectId ?? "all"}
-        options={[
-          { value: "all", label: "All projects" },
-          ...options.projects.map((project) => ({
-            value: project.id,
-            label: project.projectName,
-          })),
-        ]}
-      />
-      <FilterSelect
-        name="designerId"
-        placeholder="All designers"
-        defaultValue={filters.designerId ?? "all"}
-        options={[
-          { value: "all", label: "All designers" },
-          ...options.designers.map((designer) => ({
-            value: designer.id,
-            label: designer.name,
-          })),
-        ]}
-      />
-      <FilterSelect
-        name="designType"
-        placeholder="All types"
-        defaultValue={filters.designType ?? "all"}
-        options={[
-          { value: "all", label: "All types" },
-          ...DESIGN_TYPES.map((designType) => ({
-            value: designType,
-            label: designTypeLabels[designType],
-          })),
-        ]}
-      />
-      <FilterSelect
-        name="status"
-        placeholder="All statuses"
-        defaultValue={filters.status ?? "all"}
-        options={[
-          { value: "all", label: "All statuses" },
-          ...DESIGN_TASK_STATUSES.map((status) => ({
-            value: status,
-            label: designTaskStatusLabels[status],
-          })),
-        ]}
-      />
-      <FilterSelect
-        name="approvalStatus"
-        placeholder="All approvals"
-        defaultValue={filters.approvalStatus ?? "all"}
-        options={[
-          { value: "all", label: "All approvals" },
-          ...DESIGN_APPROVAL_STATUSES.map((approvalStatus) => ({
-            value: approvalStatus,
-            label: designApprovalStatusLabels[approvalStatus],
-          })),
-        ]}
-      />
-      <Button type="submit" variant="outline">
-        Apply
-      </Button>
+    <form
+      className="rounded-2xl border bg-card p-4"
+      onSubmit={(event) => {
+        event.preventDefault()
+        applyFilters()
+      }}
+    >
+      <FieldGroup className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <Field className="md:col-span-2 xl:col-span-1">
+          <FieldLabel htmlFor="search">Search</FieldLabel>
+          <Input
+            id="search"
+            name="search"
+            value={values.search}
+            placeholder="Search tasks..."
+            onChange={(event) =>
+              setValues((currentValues) => ({
+                ...currentValues,
+                search: event.target.value,
+              }))
+            }
+          />
+        </Field>
+        <FilterSelect
+          name="projectId"
+          label="Project"
+          value={values.projectId}
+          options={selectOptions.projectId}
+          onValueChange={(value) => updateSelect("projectId", value)}
+        />
+        <FilterSelect
+          name="designerId"
+          label="Designer"
+          value={values.designerId}
+          options={selectOptions.designerId}
+          onValueChange={(value) => updateSelect("designerId", value)}
+        />
+        <FilterSelect
+          name="designType"
+          label="Type"
+          value={values.designType}
+          options={selectOptions.designType}
+          onValueChange={(value) => updateSelect("designType", value)}
+        />
+        <FilterSelect
+          name="status"
+          label="Status"
+          value={values.status}
+          options={selectOptions.status}
+          onValueChange={(value) => updateSelect("status", value)}
+        />
+        <FilterSelect
+          name="approvalStatus"
+          label="Approval"
+          value={values.approvalStatus}
+          options={selectOptions.approvalStatus}
+          onValueChange={(value) => updateSelect("approvalStatus", value)}
+        />
+        <div className="flex items-end gap-2 md:col-span-2 xl:col-span-6">
+          <Button type="submit" disabled={isPending}>
+            <HugeiconsIcon
+              icon={FilterHorizontalIcon}
+              strokeWidth={2}
+              data-icon="inline-start"
+            />
+            {isPending ? "Filtering..." : "Apply Filters"}
+          </Button>
+          <Button type="button" variant="outline" onClick={resetFilters}>
+            Reset
+          </Button>
+        </div>
+      </FieldGroup>
     </form>
-  );
+  )
 }
 
 function FilterSelect({
   name,
-  placeholder,
-  defaultValue,
+  label,
+  value,
   options,
+  onValueChange,
 }: {
-  name: string;
-  placeholder: string;
-  defaultValue: string;
-  options: Array<{ value: string; label: string }>;
+  name: string
+  label: string
+  value: string
+  options: Array<{ value: string; label: string }>
+  onValueChange: (value: string) => void
 }) {
   return (
-    <Select name={name} defaultValue={defaultValue}>
-      <SelectTrigger className="w-full lg:w-44">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
+    <Field>
+      <FieldLabel>{label}</FieldLabel>
+      <Select name={name} value={value} onValueChange={onValueChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={`All ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="all">All {label.toLowerCase()}</SelectItem>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
+  )
 }
