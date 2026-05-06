@@ -361,6 +361,8 @@ export const projects = pgTable(
     clientName: text("client_name").notNull(),
     clientPhone: text("client_phone"),
     location: text("location"),
+    projectType: text("project_type"),
+    roomArea: text("room_area"),
     description: text("description"),
     status: projectStatusEnum("status").notNull(),
     healthStatus: healthStatusEnum("health_status")

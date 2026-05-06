@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "nvidia/minimaxai/minimax-m2.7",
+  "small_model": "nvidia/minimaxai/minimax-m2.7",
+  "provider": {
+    "nvidia": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NVIDIA NIM",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1",
+        "timeout": 300000,
+        "chunkTimeout": 30000
+      },
+      "models": {
+        "minimaxai/minimax-m2.7": {
+          "name": "MiniMax M2.7"
+        }
+      }
+    }
+  },
+  "permission": {
+    "edit": "ask",
+    "bash": "ask"
+  },
+  "instructions": [
+    "AGENTS.md",
+    "PRD.md",
+    "FLOWS.md",
+    "DESIGN.md",
+    "docs/**/*.md"
+  ]
+}

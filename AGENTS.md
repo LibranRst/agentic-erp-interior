@@ -4,6 +4,12 @@
 
 This repository is the MVP for SaaS Agentic Interior ERP for Dekoria Living, a premium interior design and contractor company.
 
+These are shared agent instructions for Codex and OpenCode:
+- Codex is the primary AI coding agent for this repository.
+- OpenCode is the fallback AI coding agent when Codex reaches usage limits.
+- Both agents must follow this AGENTS.md, the docs in docs/, official skills, and local project skills.
+- Treat this repository as an agentic coding framework, not a Codex-only setup.
+
 The product is an internal operations system focused on:
 - Owner Dashboard
 - Project Tracking
@@ -114,6 +120,31 @@ When working with AI:
 - Use official Mastra skill resources or docs before writing Mastra code.
 
 Local custom skills are for Dekoria-specific rules, business context, MVP boundaries, and review workflow.
+
+## Agent Compatibility
+
+Codex and OpenCode must both use the canonical local skills location:
+- .agents/skills/<skill-name>/SKILL.md
+
+Official skills currently expected:
+- .agents/skills/shadcn/SKILL.md
+- .agents/skills/mastra/SKILL.md
+
+Custom Dekoria skills:
+- .agents/skills/dekoria-project-architect/SKILL.md
+- .agents/skills/dekoria-ui-builder/SKILL.md
+- .agents/skills/dekoria-db-drizzle/SKILL.md
+- .agents/skills/dekoria-mastra-ai/SKILL.md
+- .agents/skills/dekoria-quality-review/SKILL.md
+
+OpenCode compatibility notes:
+- Run `opencode` from the project root.
+- Use `/init` carefully.
+- Do not blindly overwrite this curated AGENTS.md.
+- For bigger tasks, use Plan mode before Build mode.
+- Use `@` file mentions to reference docs, for example `@AGENTS.md`, `@docs/PRD.md`, and `@docs/FLOWS.md`.
+- OpenCode can discover skills from `.agents/skills/<name>/SKILL.md`.
+- If OpenCode proposes new instructions, merge them carefully with this file instead of replacing the existing rules.
 
 ## Development Rules
 

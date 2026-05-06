@@ -100,6 +100,8 @@ projects
 - client_name text not null
 - client_phone text
 - location text
+- project_type text
+- room_area text
 - description text
 - status text not null
 - health_status text not null default 'healthy'

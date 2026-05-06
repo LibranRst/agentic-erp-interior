@@ -4,7 +4,7 @@
 
 This project uses controlled vibe coding.
 
-The goal is not to let AI freely generate large random code. The goal is to use Codex as a scoped implementation agent with:
+The goal is not to let AI freely generate large random code. The goal is to use Codex or OpenCode as scoped implementation agents with:
 - clear docs
 - strict MVP boundaries
 - official skills
@@ -17,8 +17,8 @@ The goal is not to let AI freely generate large random code. The goal is to use 
 For every development phase:
 
 1. Define the phase.
-2. Tell Codex which skills to use.
-3. Tell Codex which docs to read.
+2. Tell the agent which skills to use.
+3. Tell the agent which docs to read.
 4. Give a small scoped task.
 5. Add explicit constraints.
 6. Require verification.
@@ -58,6 +58,8 @@ Return:
 - commands run
 - verification result
 - blockers
+
+When using OpenCode, run `opencode` from the project root, use Plan mode before Build mode for bigger tasks, and reference docs with `@` file mentions such as `@AGENTS.md` and `@docs/PRD.md`.
 
 ## Bad Prompt Example
 
