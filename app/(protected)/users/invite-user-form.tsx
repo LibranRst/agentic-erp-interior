@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -69,36 +76,52 @@ function InviteUserForm() {
               </AlertDescription>
             </Alert>
           ) : null}
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Name
-            <Input name="name" placeholder="Team member name" required />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Email
-            <Input
-              name="email"
-              type="email"
-              placeholder="name@dekoria.local"
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Role
-            <Select name="role" required defaultValue="project_manager">
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {roleOptions.map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </label>
+          <FieldGroup className="gap-4">
+            <Field data-invalid={hasFieldError(state.fieldErrors, "name")}>
+              <FieldLabel htmlFor="invite-name">Name</FieldLabel>
+              <Input
+                id="invite-name"
+                name="name"
+                placeholder="Team member name"
+                required
+                aria-invalid={hasFieldError(state.fieldErrors, "name")}
+              />
+              <FieldError errors={getFieldErrors(state.fieldErrors, "name")} />
+            </Field>
+            <Field data-invalid={hasFieldError(state.fieldErrors, "email")}>
+              <FieldLabel htmlFor="invite-email">Email</FieldLabel>
+              <Input
+                id="invite-email"
+                name="email"
+                type="email"
+                placeholder="name@dekoria.local"
+                required
+                aria-invalid={hasFieldError(state.fieldErrors, "email")}
+              />
+              <FieldError errors={getFieldErrors(state.fieldErrors, "email")} />
+            </Field>
+            <Field data-invalid={hasFieldError(state.fieldErrors, "role")}>
+              <FieldLabel>Role</FieldLabel>
+              <Select name="role" required defaultValue="project_manager">
+                <SelectTrigger
+                  className="w-full"
+                  aria-invalid={hasFieldError(state.fieldErrors, "role")}
+                >
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {roleOptions.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FieldError errors={getFieldErrors(state.fieldErrors, "role")} />
+            </Field>
+          </FieldGroup>
           <Button type="submit" disabled={isPending}>
             {isPending ? "Creating invite..." : "Create invite"}
           </Button>

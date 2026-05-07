@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { MediaUploader } from "@/components/shared/media-uploader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -77,6 +79,7 @@ export function DailyUpdateForm({
           <SelectField
             name="projectId"
             label="Project"
+            fieldErrors={state.fieldErrors}
             defaultValue={projectId}
             placeholder="Select project"
             onValueChange={setProjectId}
@@ -85,7 +88,7 @@ export function DailyUpdateForm({
               label: `${project.projectName} · ${project.clientName}`,
             }))}
           />
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "updateDate")}>
             <FieldLabel htmlFor="updateDate">Date</FieldLabel>
             <Input
               id="updateDate"
@@ -93,15 +96,27 @@ export function DailyUpdateForm({
               type="date"
               defaultValue={toDateInputValue(new Date())}
               required
+              aria-invalid={hasFieldError(state.fieldErrors, "updateDate")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "updateDate")} />
           </Field>
-          <Field className="md:col-span-2">
+          <Field
+            className="md:col-span-2"
+            data-invalid={hasFieldError(state.fieldErrors, "progressSummary")}
+          >
             <FieldLabel htmlFor="progressSummary">Progress summary</FieldLabel>
             <Textarea
               id="progressSummary"
               name="progressSummary"
               placeholder="Ringkas progress hari ini, kondisi site, atau milestone utama"
               required
+              aria-invalid={hasFieldError(
+                state.fieldErrors,
+                "progressSummary",
+              )}
+            />
+            <FieldError
+              errors={getFieldErrors(state.fieldErrors, "progressSummary")}
             />
           </Field>
           <Field className="md:col-span-2">
@@ -136,7 +151,9 @@ export function DailyUpdateForm({
               placeholder="Langkah berikutnya untuk PM, vendor, designer, atau owner"
             />
           </Field>
-          <Field>
+          <Field
+            data-invalid={hasFieldError(state.fieldErrors, "progressPercentage")}
+          >
             <FieldLabel htmlFor="progressPercentage">Progress</FieldLabel>
             <Input
               id="progressPercentage"
@@ -145,14 +162,22 @@ export function DailyUpdateForm({
               min={0}
               max={100}
               defaultValue={selectedProject?.progressPercentage ?? 0}
+              aria-invalid={hasFieldError(
+                state.fieldErrors,
+                "progressPercentage",
+              )}
             />
             <FieldDescription>
               Saving this update also updates project progress.
             </FieldDescription>
+            <FieldError
+              errors={getFieldErrors(state.fieldErrors, "progressPercentage")}
+            />
           </Field>
           <SelectField
             name="healthStatus"
             label="Health status"
+            fieldErrors={state.fieldErrors}
             defaultValue={selectedProject?.healthStatus ?? "healthy"}
             options={DAILY_UPDATE_HEALTH_STATUSES.map((healthStatus) => ({
               value: healthStatus,
@@ -192,6 +217,7 @@ function SelectField({
   placeholder = "Select option",
   options,
   onValueChange,
+  fieldErrors,
 }: {
   name: string;
   label: string;
@@ -199,9 +225,12 @@ function SelectField({
   placeholder?: string;
   options: Array<{ value: string; label: string }>;
   onValueChange?: (value: string) => void;
+  fieldErrors?: DailyUpdateActionState["fieldErrors"];
 }) {
+  const invalid = hasFieldError(fieldErrors, name);
+
   return (
-    <Field>
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Select
         name={name}
@@ -209,7 +238,7 @@ function SelectField({
         onValueChange={onValueChange}
         required={name === "projectId"}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-invalid={invalid}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -222,6 +251,7 @@ function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <FieldError errors={getFieldErrors(fieldErrors, name)} />
     </Field>
   );
 }

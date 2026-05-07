@@ -21,6 +21,7 @@ import {
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
 import { createMediaAssets } from "@/src/features/media/server";
+import { getZodFieldErrors } from "@/src/lib/forms";
 
 const materialIdSchema = z.uuid("Material id is invalid.");
 
@@ -55,6 +56,7 @@ export async function createMaterialAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -104,6 +106,7 @@ export async function updateMaterialAction(
     return {
       status: "error",
       message: getZodMessage(parsedMaterialId.error),
+      fieldErrors: getZodFieldErrors(parsedMaterialId.error),
     };
   }
 
@@ -113,6 +116,7 @@ export async function updateMaterialAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 

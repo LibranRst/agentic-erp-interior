@@ -1,4 +1,5 @@
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import { DataTableShell } from "@/components/shared/data-table";
 import { UserAvatarUploader } from "@/components/shared/user-avatar-uploader";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -43,7 +44,7 @@ export default async function UsersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto rounded-xl border">
+            <DataTableShell>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -70,7 +71,7 @@ export default async function UsersPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </DataTableShell>
           </CardContent>
         </Card>
       </div>
@@ -82,7 +83,7 @@ export default async function UsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-xl border">
+          <DataTableShell>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -115,7 +116,7 @@ export default async function UsersPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </DataTableShell>
         </CardContent>
       </Card>
     </PageContainer>

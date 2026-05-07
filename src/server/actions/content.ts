@@ -26,6 +26,7 @@ import {
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
 import { createMediaAssets } from "@/src/features/media/server";
+import { getZodFieldErrors } from "@/src/lib/forms";
 
 const contentAssetIdSchema = z.uuid("Content asset id is invalid.");
 
@@ -60,6 +61,7 @@ export async function createContentAssetAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -111,6 +113,7 @@ export async function updateContentAssetAction(
     return {
       status: "error",
       message: getZodMessage(parsedAssetId.error),
+      fieldErrors: getZodFieldErrors(parsedAssetId.error),
     };
   }
 
@@ -131,6 +134,7 @@ export async function updateContentAssetAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 

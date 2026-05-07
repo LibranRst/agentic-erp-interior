@@ -2,8 +2,15 @@
 
 import { useActionState } from "react";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   acceptInviteAction,
@@ -44,26 +51,38 @@ function AcceptInviteForm({
         <div className="mt-2 text-xs text-muted-foreground">Role: {role}</div>
       </div>
       <input type="hidden" name="token" value={token} />
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Password
-        <Input
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
-        />
-      </label>
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Confirm password
-        <Input
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
-        />
-      </label>
+      <FieldGroup className="gap-4">
+        <Field data-invalid={hasFieldError(state.fieldErrors, "password")}>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            aria-invalid={hasFieldError(state.fieldErrors, "password")}
+          />
+          <FieldError errors={getFieldErrors(state.fieldErrors, "password")} />
+        </Field>
+        <Field
+          data-invalid={hasFieldError(state.fieldErrors, "confirmPassword")}
+        >
+          <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            aria-invalid={hasFieldError(state.fieldErrors, "confirmPassword")}
+          />
+          <FieldError
+            errors={getFieldErrors(state.fieldErrors, "confirmPassword")}
+          />
+        </Field>
+      </FieldGroup>
       <Button type="submit" disabled={isPending}>
         {isPending ? "Creating account..." : "Create account"}
       </Button>

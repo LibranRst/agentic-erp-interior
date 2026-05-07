@@ -24,6 +24,7 @@ import {
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
 import { createMediaAssets } from "@/src/features/media/server";
+import { getZodFieldErrors } from "@/src/lib/forms";
 
 export async function getDailyUpdates(filters: unknown = {}) {
   const currentUser = await requireUser();
@@ -86,6 +87,7 @@ export async function createDailyUpdateAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 

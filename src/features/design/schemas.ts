@@ -9,6 +9,7 @@ import {
   parseMediaAssets,
   uploadedMediaSchema,
 } from "@/src/features/media/schemas";
+import type { FormActionState } from "@/src/lib/forms";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value === "string") {
@@ -99,10 +100,7 @@ export type UploadedDesignMediaInput = z.infer<
 export type DesignTaskMutationInput = z.infer<typeof designTaskMutationSchema>;
 export type DesignTaskFilters = z.infer<typeof designTaskFiltersSchema>;
 
-export type DesignTaskActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-};
+export type DesignTaskActionState = FormActionState;
 
 export function parseDesignTaskFormData(formData: FormData) {
   return designTaskMutationSchema.safeParse({

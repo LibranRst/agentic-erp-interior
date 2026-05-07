@@ -111,12 +111,10 @@ export async function getDailyUpdateMetrics(currentUser?: CurrentUser) {
     eq(schema.mediaAssets.relatedType, "daily_update"),
     scope
       ? sql`${schema.mediaAssets.relatedId} in (
-          select ${schema.dailyUpdates.id}
-          from ${schema.dailyUpdates}
-          where ${schema.dailyUpdates.projectId} in (
-            select ${schema.projects.id}
-            from ${schema.projects}
-            where ${schema.projects.pmId} = ${currentUser?.id}
+          select id
+          from daily_updates
+          where project_id in (
+            ${pmProjectIdsSubquery(currentUser)}
           )
         )`
       : undefined,
@@ -217,10 +215,12 @@ function buildRoleScope(currentUser?: CurrentUser) {
   }
 
   return sql`${schema.dailyUpdates.projectId} in (
-    select ${schema.projects.id}
-    from ${schema.projects}
-    where ${schema.projects.pmId} = ${currentUser.id}
+    ${pmProjectIdsSubquery(currentUser)}
   )`;
+}
+
+function pmProjectIdsSubquery(currentUser: CurrentUser | undefined) {
+  return sql`select id from projects where pm_id = ${currentUser?.id}`;
 }
 
 async function getSelectableProjects(currentUser?: CurrentUser) {

@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { MediaUploader } from "@/components/shared/media-uploader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -114,6 +116,7 @@ export function DesignTaskForm({
           <SelectField
             name="projectId"
             label="Project"
+            fieldErrors={state.fieldErrors}
             defaultValue={projectId}
             placeholder="Select project"
             onValueChange={setProjectId}
@@ -126,6 +129,7 @@ export function DesignTaskForm({
           <SelectField
             name="designerId"
             label="Designer"
+            fieldErrors={state.fieldErrors}
             defaultValue={defaultDesignerId}
             placeholder="Assign designer"
             options={[
@@ -136,7 +140,10 @@ export function DesignTaskForm({
               })),
             ]}
           />
-          <Field className="md:col-span-2">
+          <Field
+            className="md:col-span-2"
+            data-invalid={hasFieldError(state.fieldErrors, "taskName")}
+          >
             <FieldLabel htmlFor="taskName">Task</FieldLabel>
             <Input
               id="taskName"
@@ -144,11 +151,14 @@ export function DesignTaskForm({
               defaultValue={task?.taskName ?? ""}
               placeholder="Kitchen render revision"
               required
+              aria-invalid={hasFieldError(state.fieldErrors, "taskName")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "taskName")} />
           </Field>
           <SelectField
             name="designType"
             label="Design type"
+            fieldErrors={state.fieldErrors}
             defaultValue={task?.designType ?? "render"}
             options={DESIGN_TYPES.map((designType) => ({
               value: designType,
@@ -158,6 +168,7 @@ export function DesignTaskForm({
           <SelectField
             name="status"
             label="Status"
+            fieldErrors={state.fieldErrors}
             defaultValue={task?.status ?? "not_started"}
             options={DESIGN_TASK_STATUSES.map((status) => ({
               value: status,
@@ -167,13 +178,14 @@ export function DesignTaskForm({
           <SelectField
             name="approvalStatus"
             label="Approval"
+            fieldErrors={state.fieldErrors}
             defaultValue={task?.approvalStatus ?? "not_submitted"}
             options={DESIGN_APPROVAL_STATUSES.map((approvalStatus) => ({
               value: approvalStatus,
               label: designApprovalStatusLabels[approvalStatus],
             }))}
           />
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "revisionCount")}>
             <FieldLabel htmlFor="revisionCount">Revision count</FieldLabel>
             <Input
               id="revisionCount"
@@ -182,6 +194,10 @@ export function DesignTaskForm({
               min={0}
               max={99}
               defaultValue={task?.revisionCount ?? 0}
+              aria-invalid={hasFieldError(state.fieldErrors, "revisionCount")}
+            />
+            <FieldError
+              errors={getFieldErrors(state.fieldErrors, "revisionCount")}
             />
           </Field>
           <Field>
@@ -237,6 +253,7 @@ function SelectField({
   options,
   required = false,
   onValueChange,
+  fieldErrors,
 }: {
   name: string;
   label: string;
@@ -245,9 +262,12 @@ function SelectField({
   options: Array<{ value: string; label: string }>;
   required?: boolean;
   onValueChange?: (value: string) => void;
+  fieldErrors?: DesignTaskActionState["fieldErrors"];
 }) {
+  const invalid = hasFieldError(fieldErrors, name);
+
   return (
-    <Field>
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Select
         name={name}
@@ -255,7 +275,7 @@ function SelectField({
         onValueChange={onValueChange}
         required={required}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-invalid={invalid}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -268,6 +288,7 @@ function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <FieldError errors={getFieldErrors(fieldErrors, name)} />
     </Field>
   );
 }

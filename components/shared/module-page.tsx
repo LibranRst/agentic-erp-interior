@@ -5,6 +5,7 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container"
+import { DataTableShell } from "@/components/shared/data-table"
 import { MetricCard } from "@/components/shared/metric-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -85,7 +86,7 @@ function ModulePage({
               Filter
             </Button>
           </div>
-          <div className="overflow-x-auto rounded-xl border">
+          <DataTableShell>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -118,7 +119,7 @@ function ModulePage({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </DataTableShell>
         </CardContent>
       </Card>
     </PageContainer>

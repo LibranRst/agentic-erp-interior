@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -86,7 +93,7 @@ export function ConvertLeadDialog({
 
           <FieldSet>
             <FieldGroup className="grid gap-4 md:grid-cols-2">
-              <Field>
+              <Field data-invalid={hasFieldError(state.fieldErrors, "projectName")}>
                 <FieldLabel htmlFor={`projectName-${lead.id}`}>
                   Project name
                 </FieldLabel>
@@ -95,6 +102,10 @@ export function ConvertLeadDialog({
                   name="projectName"
                   defaultValue={defaultProjectName}
                   required
+                  aria-invalid={hasFieldError(state.fieldErrors, "projectName")}
+                />
+                <FieldError
+                  errors={getFieldErrors(state.fieldErrors, "projectName")}
                 />
               </Field>
               <Field>
@@ -129,6 +140,7 @@ export function ConvertLeadDialog({
                 name="pmId"
                 label="Project manager"
                 defaultValue="unassigned"
+                fieldErrors={state.fieldErrors}
                 options={[
                   { value: "unassigned", label: "Unassigned" },
                   ...projectOptions.projectManagers.map((user) => ({
@@ -141,6 +153,7 @@ export function ConvertLeadDialog({
                 name="designerId"
                 label="Designer"
                 defaultValue="unassigned"
+                fieldErrors={state.fieldErrors}
                 options={[
                   { value: "unassigned", label: "Unassigned" },
                   ...projectOptions.designers.map((user) => ({
@@ -177,17 +190,21 @@ function SelectField({
   label,
   defaultValue,
   options,
+  fieldErrors,
 }: {
   name: string;
   label: string;
   defaultValue: string;
   options: Array<{ value: string; label: string }>;
+  fieldErrors?: LeadActionState["fieldErrors"];
 }) {
+  const invalid = hasFieldError(fieldErrors, name);
+
   return (
-    <Field>
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Select name={name} defaultValue={defaultValue}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-invalid={invalid}>
           <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
         </SelectTrigger>
         <SelectContent>
@@ -200,6 +217,7 @@ function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <FieldError errors={getFieldErrors(fieldErrors, name)} />
     </Field>
   );
 }

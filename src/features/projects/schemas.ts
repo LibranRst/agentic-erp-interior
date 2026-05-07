@@ -7,6 +7,7 @@ import {
   PROJECT_PRIORITIES,
   PROJECT_STATUSES,
 } from "./constants";
+import type { FormActionState } from "@/src/lib/forms";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value === "string") {
@@ -107,10 +108,7 @@ export const projectFiltersSchema = z.object({
 export type ProjectMutationInput = z.infer<typeof projectMutationSchema>;
 export type ProjectFilters = z.infer<typeof projectFiltersSchema>;
 
-export type ProjectActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-};
+export type ProjectActionState = FormActionState;
 
 export function parseProjectFormData(formData: FormData) {
   return projectMutationSchema.safeParse({

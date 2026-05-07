@@ -22,6 +22,7 @@ import {
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
 import { createMediaAssets } from "@/src/features/media/server";
+import { getZodFieldErrors } from "@/src/lib/forms";
 
 const designTaskIdSchema = z.uuid("Design task id is invalid.");
 
@@ -61,6 +62,7 @@ export async function createDesignTaskAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -111,6 +113,7 @@ export async function updateDesignTaskAction(
     return {
       status: "error",
       message: getZodMessage(parsedTaskId.error),
+      fieldErrors: getZodFieldErrors(parsedTaskId.error),
     };
   }
 
@@ -141,6 +144,7 @@ export async function updateDesignTaskAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 

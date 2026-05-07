@@ -25,6 +25,7 @@ import {
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
 import { createMediaAssets } from "@/src/features/media/server";
+import { getZodFieldErrors } from "@/src/lib/forms";
 
 const leadIdSchema = z.uuid("Lead id is invalid.");
 
@@ -66,6 +67,7 @@ export async function createLeadAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -118,6 +120,7 @@ export async function updateLeadAction(
     return {
       status: "error",
       message: getZodMessage(parsedLeadId.error),
+      fieldErrors: getZodFieldErrors(parsedLeadId.error),
     };
   }
 
@@ -127,6 +130,7 @@ export async function updateLeadAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -196,6 +200,7 @@ export async function convertLeadToProjectAction(
     return {
       status: "error",
       message: getZodMessage(parsedLeadId.error),
+      fieldErrors: getZodFieldErrors(parsedLeadId.error),
     };
   }
 
@@ -205,6 +210,7 @@ export async function convertLeadToProjectAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 

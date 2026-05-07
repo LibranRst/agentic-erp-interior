@@ -21,6 +21,7 @@ import {
   requireUser,
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
+import { getZodFieldErrors } from "@/src/lib/forms";
 
 const projectIdSchema = z.uuid("Project id is invalid.");
 
@@ -56,6 +57,7 @@ export async function createProjectAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -90,6 +92,7 @@ export async function updateProjectAction(
     return {
       status: "error",
       message: getZodMessage(parsedProjectId.error),
+      fieldErrors: getZodFieldErrors(parsedProjectId.error),
     };
   }
 
@@ -99,6 +102,7 @@ export async function updateProjectAction(
     return {
       status: "error",
       message: getZodMessage(parsed.error),
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 

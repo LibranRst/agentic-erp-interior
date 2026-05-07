@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { MediaUploader } from "@/components/shared/media-uploader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -104,6 +106,7 @@ export function MaterialForm({
           <SelectField
             name="projectId"
             label="Project"
+            fieldErrors={state.fieldErrors}
             defaultValue={projectId}
             placeholder="Select project"
             required
@@ -116,6 +119,7 @@ export function MaterialForm({
           <SelectField
             name="vendorId"
             label="Vendor"
+            fieldErrors={state.fieldErrors}
             defaultValue={material?.vendorId ?? "unassigned"}
             placeholder="Select vendor"
             options={[
@@ -128,7 +132,7 @@ export function MaterialForm({
               })),
             ]}
           />
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "materialName")}>
             <FieldLabel htmlFor="materialName">Material</FieldLabel>
             <Input
               id="materialName"
@@ -136,7 +140,9 @@ export function MaterialForm({
               defaultValue={material?.materialName ?? ""}
               placeholder="Marble slab, hardware, veneer finish"
               required
+              aria-invalid={hasFieldError(state.fieldErrors, "materialName")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "materialName")} />
           </Field>
           <Field>
             <FieldLabel htmlFor="category">Category</FieldLabel>
@@ -150,6 +156,7 @@ export function MaterialForm({
           <SelectField
             name="status"
             label="Status"
+            fieldErrors={state.fieldErrors}
             defaultValue={material?.status ?? "requested"}
             options={MATERIAL_STATUSES.map((status) => ({
               value: status,
@@ -159,13 +166,14 @@ export function MaterialForm({
           <SelectField
             name="urgencyLevel"
             label="Urgency"
+            fieldErrors={state.fieldErrors}
             defaultValue={material?.urgencyLevel ?? "medium"}
             options={MATERIAL_URGENCY_LEVELS.map((urgencyLevel) => ({
               value: urgencyLevel,
               label: materialUrgencyLabels[urgencyLevel],
             }))}
           />
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "quantity")}>
             <FieldLabel htmlFor="quantity">Quantity</FieldLabel>
             <Input
               id="quantity"
@@ -175,7 +183,9 @@ export function MaterialForm({
               step="0.01"
               defaultValue={material?.quantity ?? ""}
               placeholder="12"
+              aria-invalid={hasFieldError(state.fieldErrors, "quantity")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "quantity")} />
           </Field>
           <Field>
             <FieldLabel htmlFor="unit">Unit</FieldLabel>
@@ -243,6 +253,7 @@ function SelectField({
   options,
   required = false,
   onValueChange,
+  fieldErrors,
 }: {
   name: string;
   label: string;
@@ -251,9 +262,12 @@ function SelectField({
   options: Array<{ value: string; label: string }>;
   required?: boolean;
   onValueChange?: (value: string) => void;
+  fieldErrors?: MaterialActionState["fieldErrors"];
 }) {
+  const invalid = hasFieldError(fieldErrors, name);
+
   return (
-    <Field>
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Select
         name={name}
@@ -261,7 +275,7 @@ function SelectField({
         required={required}
         onValueChange={onValueChange}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-invalid={invalid}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -274,6 +288,7 @@ function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <FieldError errors={getFieldErrors(fieldErrors, name)} />
     </Field>
   );
 }

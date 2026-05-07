@@ -12,19 +12,24 @@ import { hashInviteToken } from "@/src/lib/auth/invites";
 import { db, schema } from "@/src/lib/db";
 import {
   ROLE_NAMES,
+  requirePermission,
   requireRole,
   requireUser,
 } from "@/src/lib/auth/permissions";
+import type { FieldErrors } from "@/src/lib/forms";
+import { getZodFieldErrors } from "@/src/lib/forms";
 
 export type InviteActionState = {
   status: "idle" | "success" | "error";
   message?: string;
   inviteUrl?: string;
+  fieldErrors?: FieldErrors;
 };
 
 export type AcceptInviteState = {
   status: "idle" | "error";
   message?: string;
+  fieldErrors?: FieldErrors;
 };
 
 const createInviteSchema = z.object({
@@ -51,6 +56,7 @@ export async function createUserInviteAction(
   formData: FormData,
 ): Promise<InviteActionState> {
   const currentUser = await requireUser();
+  requirePermission(currentUser, "user:create");
   requireRole(currentUser, ["owner", "admin"]);
 
   const parsed = createInviteSchema.safeParse({
@@ -63,6 +69,7 @@ export async function createUserInviteAction(
     return {
       status: "error",
       message: parsed.error.issues[0]?.message ?? "Invite data is invalid.",
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -99,6 +106,7 @@ export async function createUserInviteAction(
 
 export async function revokeUserInviteAction(inviteId: string) {
   const currentUser = await requireUser();
+  requirePermission(currentUser, "user:update");
   requireRole(currentUser, ["owner", "admin"]);
 
   await db
@@ -129,6 +137,7 @@ export async function acceptInviteAction(
     return {
       status: "error",
       message: parsed.error.issues[0]?.message ?? "Invite data is invalid.",
+      fieldErrors: getZodFieldErrors(parsed.error),
     };
   }
 
@@ -214,6 +223,7 @@ export async function acceptInviteAction(
 
 export async function getUsersAndInvites() {
   const currentUser = await requireUser();
+  requirePermission(currentUser, "user:view");
   requireRole(currentUser, ["owner", "admin"]);
 
   const [users, invites] = await Promise.all([

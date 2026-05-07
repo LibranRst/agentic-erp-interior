@@ -55,12 +55,10 @@ export async function updateUserAvatarMediaAction(
   mediaAssets: unknown,
 ) {
   const currentUser = await requireUser();
+  requirePermission(currentUser, "user:avatar:update");
   const parsedUserId = idSchema.parse(userId);
 
-  if (
-    parsedUserId !== currentUser.id &&
-    !["owner", "admin"].includes(currentUser.role)
-  ) {
+  if (!canUpdateUserAvatar(currentUser, parsedUserId)) {
     throw new ForbiddenError("You can only update your own avatar.");
   }
 
@@ -94,4 +92,15 @@ export async function updateUserAvatarMediaAction(
 
   revalidatePath("/users");
   revalidatePath("/dashboard");
+}
+
+function canUpdateUserAvatar(
+  currentUser: Awaited<ReturnType<typeof requireUser>>,
+  targetUserId: string,
+) {
+  return (
+    targetUserId === currentUser.id ||
+    currentUser.role === "owner" ||
+    currentUser.role === "admin"
+  );
 }

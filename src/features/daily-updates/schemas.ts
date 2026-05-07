@@ -5,6 +5,7 @@ import {
   parseMediaAssets,
   uploadedMediaSchema,
 } from "@/src/features/media/schemas";
+import type { FormActionState } from "@/src/lib/forms";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value === "string") {
@@ -93,10 +94,7 @@ export type DailyUpdateMutationInput = z.infer<
 >;
 export type DailyUpdateFilters = z.infer<typeof dailyUpdateFiltersSchema>;
 
-export type DailyUpdateActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-};
+export type DailyUpdateActionState = FormActionState;
 
 export function parseDailyUpdateFormData(formData: FormData) {
   return dailyUpdateMutationSchema.safeParse({

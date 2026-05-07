@@ -3,6 +3,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ViewIcon } from "@hugeicons/core-free-icons";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table";
 import { MetricCard } from "@/components/shared/metric-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,12 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -115,7 +113,7 @@ export default async function ProjectsPage({
           <ProjectFilters filters={filters} options={options} />
 
           {projects.length > 0 ? (
-            <div className="min-w-0 rounded-xl border">
+            <DataTableShell>
               <Table className="min-w-[1040px]">
                 <TableHeader>
                   <TableRow>
@@ -204,17 +202,12 @@ export default async function ProjectsPage({
                   })}
                 </TableBody>
               </Table>
-            </div>
+            </DataTableShell>
           ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>No projects found</EmptyTitle>
-                <EmptyDescription>
-                  Adjust the search or filters, or create the first tracked
-                  project for this workspace.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <RecordEmptyState
+              title="No projects found"
+              description="Adjust the search or filters, or create the first tracked project for this workspace."
+            />
           )}
         </CardContent>
       </Card>

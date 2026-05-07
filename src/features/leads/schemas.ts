@@ -5,6 +5,7 @@ import {
   parseMediaAssets,
   uploadedMediaSchema,
 } from "@/src/features/media/schemas";
+import type { FormActionState } from "@/src/lib/forms";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value === "string") {
@@ -94,10 +95,7 @@ export type UploadedLeadMediaInput = z.infer<typeof uploadedMediaSchema>;
 export type LeadFilters = z.infer<typeof leadFiltersSchema>;
 export type LeadConvertInput = z.infer<typeof leadConvertSchema>;
 
-export type LeadActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-};
+export type LeadActionState = FormActionState;
 
 export function parseLeadFormData(formData: FormData) {
   return leadMutationSchema.safeParse({

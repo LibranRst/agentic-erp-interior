@@ -8,11 +8,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table";
 import {
   Table,
   TableBody,
@@ -33,19 +31,15 @@ export function DailyUpdateTable({
 }) {
   if (updates.length === 0) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>No daily updates found</EmptyTitle>
-          <EmptyDescription>
-            Adjust the filters or create the first PM progress report.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <RecordEmptyState
+        title="No daily updates found"
+        description="Adjust the filters or create the first PM progress report."
+      />
     );
   }
 
   return (
-    <div className="min-w-0 rounded-xl border">
+    <DataTableShell>
       <Table className="min-w-[1120px]">
         <TableHeader>
           <TableRow>
@@ -126,7 +120,6 @@ export function DailyUpdateTable({
           ))}
         </TableBody>
       </Table>
-    </div>
+    </DataTableShell>
   );
 }
-

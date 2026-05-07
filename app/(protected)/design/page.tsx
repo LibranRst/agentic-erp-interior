@@ -3,6 +3,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { FileAttachmentIcon } from "@hugeicons/core-free-icons";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table";
 import { MetricCard } from "@/components/shared/metric-card";
 import {
   Card,
@@ -11,12 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -109,7 +107,7 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
           <DesignTaskFilters filters={designFilters} options={options} />
 
           {tasks.length > 0 ? (
-            <div className="min-w-0 rounded-xl border">
+            <DataTableShell>
               <Table className="min-w-[1120px]">
                 <TableHeader>
                   <TableRow>
@@ -181,17 +179,12 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </DataTableShell>
           ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>No design tasks found</EmptyTitle>
-                <EmptyDescription>
-                  Adjust the filters or create the first design, render, or DED
-                  task for this workspace.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <RecordEmptyState
+              title="No design tasks found"
+              description="Adjust the filters or create the first design, render, or DED task for this workspace."
+            />
           )}
         </CardContent>
       </Card>

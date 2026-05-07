@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table";
 import { MetricCard } from "@/components/shared/metric-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,12 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -108,7 +106,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
           <LeadFilters filters={leadFilters} options={options} />
 
           {leads.length > 0 ? (
-            <div className="min-w-0 rounded-xl border">
+            <DataTableShell>
               <Table className="min-w-[1240px]">
                 <TableHeader>
                   <TableRow>
@@ -198,17 +196,12 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </DataTableShell>
           ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>No leads found</EmptyTitle>
-                <EmptyDescription>
-                  Adjust the filters or create the first lead for the sales
-                  snapshot.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <RecordEmptyState
+              title="No leads found"
+              description="Adjust the filters or create the first lead for the sales snapshot."
+            />
           )}
         </CardContent>
       </Card>

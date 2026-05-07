@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { MediaUploader } from "@/components/shared/media-uploader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -110,6 +112,7 @@ export function ContentAssetForm({
           <SelectField
             name="projectId"
             label="Project"
+            fieldErrors={state.fieldErrors}
             defaultValue={projectId}
             placeholder="Select project"
             required
@@ -131,6 +134,7 @@ export function ContentAssetForm({
           <SelectField
             name="visualStatus"
             label="Visual Status"
+            fieldErrors={state.fieldErrors}
             defaultValue={asset?.visualStatus ?? "unassigned"}
             options={[
               { value: "unassigned", label: "Not Set" },
@@ -143,6 +147,7 @@ export function ContentAssetForm({
           <SelectField
             name="footageStatus"
             label="Footage Status"
+            fieldErrors={state.fieldErrors}
             defaultValue={asset?.footageStatus ?? "unassigned"}
             options={[
               { value: "unassigned", label: "Not Set" },
@@ -155,6 +160,7 @@ export function ContentAssetForm({
           <SelectField
             name="contentOpportunity"
             label="Content Opportunity"
+            fieldErrors={state.fieldErrors}
             defaultValue={asset?.contentOpportunity ?? "unassigned"}
             options={[
               { value: "unassigned", label: "Not Set" },
@@ -167,6 +173,7 @@ export function ContentAssetForm({
           <SelectField
             name="contentStatus"
             label="Content Status"
+            fieldErrors={state.fieldErrors}
             defaultValue={asset?.contentStatus ?? "not_ready"}
             options={CONTENT_STATUSES.map((status) => ({
               value: status,
@@ -185,7 +192,10 @@ export function ContentAssetForm({
               Keep this owner-friendly and specific enough for marketing to act.
             </FieldDescription>
           </Field>
-          <Field className="md:col-span-2">
+          <Field
+            className="md:col-span-2"
+            data-invalid={hasFieldError(state.fieldErrors, "publishUrl")}
+          >
             <FieldLabel htmlFor="publishUrl">Publish URL</FieldLabel>
             <Input
               id="publishUrl"
@@ -193,7 +203,9 @@ export function ContentAssetForm({
               type="url"
               defaultValue={asset?.publishUrl ?? ""}
               placeholder="https://instagram.com/..."
+              aria-invalid={hasFieldError(state.fieldErrors, "publishUrl")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "publishUrl")} />
           </Field>
           <Field className="md:col-span-2">
             <FieldLabel htmlFor="notes">Notes</FieldLabel>
@@ -236,6 +248,7 @@ function SelectField({
   options,
   required = false,
   onValueChange,
+  fieldErrors,
 }: {
   name: string;
   label: string;
@@ -244,9 +257,12 @@ function SelectField({
   options: Array<{ value: string; label: string }>;
   required?: boolean;
   onValueChange?: (value: string) => void;
+  fieldErrors?: ContentAssetActionState["fieldErrors"];
 }) {
+  const invalid = hasFieldError(fieldErrors, name);
+
   return (
-    <Field>
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Select
         name={name}
@@ -254,7 +270,7 @@ function SelectField({
         required={required}
         onValueChange={onValueChange}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-invalid={invalid}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -267,6 +283,7 @@ function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <FieldError errors={getFieldErrors(fieldErrors, name)} />
     </Field>
   );
 }

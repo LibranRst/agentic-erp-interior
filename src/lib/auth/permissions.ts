@@ -49,6 +49,7 @@ export const PERMISSIONS = [
   "user:view",
   "user:create",
   "user:update",
+  "user:avatar:update",
   "settings:update",
 ] as const;
 
@@ -65,6 +66,7 @@ const rolePermissions = {
     "daily_update:create",
     "daily_update:update",
     "ai_summary:view",
+    "user:avatar:update",
   ],
   designer: [
     "dashboard:view",
@@ -73,6 +75,7 @@ const rolePermissions = {
     "design_task:create",
     "design_task:update",
     "ai_summary:view",
+    "user:avatar:update",
   ],
   purchasing: [
     "dashboard:view",
@@ -84,6 +87,7 @@ const rolePermissions = {
     "vendor:create",
     "vendor:update",
     "ai_summary:view",
+    "user:avatar:update",
   ],
   sales: [
     "dashboard:view",
@@ -92,6 +96,7 @@ const rolePermissions = {
     "lead:create",
     "lead:update",
     "ai_summary:view",
+    "user:avatar:update",
   ],
   marketing: [
     "dashboard:view",
@@ -100,6 +105,7 @@ const rolePermissions = {
     "content_asset:create",
     "content_asset:update",
     "ai_summary:view",
+    "user:avatar:update",
   ],
 } satisfies Record<RoleName, readonly Permission[]>;
 

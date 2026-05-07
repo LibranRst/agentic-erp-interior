@@ -34,7 +34,11 @@ function PageHeader({
           {description}
         </p>
       </div>
-      {action}
+      {action ? (
+        <div className="flex w-full shrink-0 sm:w-auto sm:justify-end">
+          {action}
+        </div>
+      ) : null}
     </div>
   )
 }

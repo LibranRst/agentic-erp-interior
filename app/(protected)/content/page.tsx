@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table";
 import { MetricCard } from "@/components/shared/metric-card";
 import {
   Card,
@@ -9,12 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -109,7 +107,7 @@ export default async function ContentPage({
           <ContentAssetFilters filters={contentFilters} options={options} />
 
           {assets.length > 0 ? (
-            <div className="min-w-0 rounded-xl border">
+            <DataTableShell>
               <Table className="min-w-[1280px]">
                 <TableHeader>
                   <TableRow>
@@ -209,17 +207,12 @@ export default async function ContentPage({
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </DataTableShell>
           ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>No content assets found</EmptyTitle>
-                <EmptyDescription>
-                  Adjust the filters or create the first content opportunity for
-                  marketing readiness.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <RecordEmptyState
+              title="No content assets found"
+              description="Adjust the filters or create the first content opportunity for marketing readiness."
+            />
           )}
         </CardContent>
       </Card>

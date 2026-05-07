@@ -1,25 +1,210 @@
-import { ModulePage } from "@/components/shared/module-page"
+import { PageContainer, PageHeader } from "@/components/layout/page-container"
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table"
+import { MetricCard } from "@/components/shared/metric-card"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { GenerateAiSummaryButton } from "@/src/features/ai-summary/components/generate-ai-summary-button"
+import {
+  getAiSummaryHistory,
+  getLatestAiSummary,
+} from "@/src/server/actions/ai-summary"
 import { requirePageRole } from "@/src/lib/auth/permissions"
 
 export default async function AiSummaryPage() {
   await requirePageRole(["owner", "admin"])
 
+  const [latestSummary, summaryHistory] = await Promise.all([
+    getLatestAiSummary(),
+    getAiSummaryHistory(20),
+  ])
+
+  const successfulRuns = summaryHistory.filter((summary) =>
+    ["success", "fallback_success"].includes(summary.aiRun?.status ?? ""),
+  ).length
+  const fallbackRuns = summaryHistory.filter(
+    (summary) => summary.aiRun?.status === "fallback_success",
+  ).length
+
   return (
-    <ModulePage
-      title="AI Summary"
-      description="Operational owner briefing generated through the future Mastra OwnerOpsAgent workflow."
-      actionLabel="Generate Summary"
-      metrics={[
-        { title: "Latest Runs", value: "0", description: "Awaiting Mastra setup" },
-        { title: "Saved Summaries", value: "0", description: "Database pending" },
-        { title: "Alerts", value: "0", description: "No live data yet" },
-        { title: "Actions", value: "0", description: "Suggestions pending" },
-      ]}
-      rows={[
-        { name: "Morning briefing workflow", owner: "OwnerOpsAgent", status: "Planned", priority: "Normal", updated: "Scaffold" },
-        { name: "Project risk detection", owner: "OwnerOpsAgent", status: "Planned", priority: "Normal", updated: "Scaffold" },
-        { name: "Content opportunity scan", owner: "OwnerOpsAgent", status: "Planned", priority: "Normal", updated: "Scaffold" },
-      ]}
-    />
+    <PageContainer>
+      <PageHeader
+        title="AI Summary"
+        description="Saved owner briefings generated through the Mastra OwnerOpsAgent workflow."
+        action={<GenerateAiSummaryButton />}
+      />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          title="Saved Summaries"
+          value={summaryHistory.length.toString()}
+          description="Recent generated briefings"
+        />
+        <MetricCard
+          title="Successful Runs"
+          value={successfulRuns.toString()}
+          description="Completed with primary or fallback model"
+        />
+        <MetricCard
+          title="Fallback Runs"
+          value={fallbackRuns.toString()}
+          description="Recovered with low reasoning fallback"
+        />
+        <MetricCard
+          title="Latest Status"
+          value={latestSummary?.aiRun?.status ?? "None"}
+          description={
+            latestSummary
+              ? formatGeneratedAt(latestSummary.createdAt)
+              : "No summary generated yet"
+          }
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Latest Morning Summary</CardTitle>
+          <CardDescription>
+            Bahasa Indonesia, owner-friendly, and grounded in saved ERP data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {latestSummary ? (
+            <>
+              <p className="whitespace-pre-wrap text-sm leading-6">
+                {latestSummary.content}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={getStatusVariant(latestSummary.aiRun?.status)}>
+                  {latestSummary.aiRun?.status ?? "saved"}
+                </Badge>
+                <Badge variant="secondary">
+                  {latestSummary.aiRun?.modelName ?? "Model not logged"}
+                </Badge>
+                <Badge variant="outline">
+                  Reasoning{" "}
+                  {latestSummary.aiRun?.reasoningLevel ?? "not logged"}
+                </Badge>
+                <Badge variant="outline">
+                  {formatGeneratedAt(latestSummary.createdAt)}
+                </Badge>
+              </div>
+            </>
+          ) : (
+            <RecordEmptyState
+              title="No AI summary yet"
+              description="Generate the first owner briefing to populate this card."
+              className="p-8"
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Summary History</CardTitle>
+          <CardDescription>
+            Model, reasoning, status, and generation metadata for saved AI
+            summaries.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataTableShell>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Generated</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Reasoning</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Generated By</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {summaryHistory.length > 0 ? (
+                  summaryHistory.map((summary) => (
+                    <TableRow key={summary.id}>
+                      <TableCell className="font-medium">
+                        {formatGeneratedAt(summary.createdAt)}
+                      </TableCell>
+                      <TableCell>{formatSummaryType(summary.summaryType)}</TableCell>
+                      <TableCell>
+                        {summary.aiRun?.modelName ?? "Model not logged"}
+                      </TableCell>
+                      <TableCell>
+                        {summary.aiRun?.reasoningLevel ?? "Not logged"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(summary.aiRun?.status)}>
+                          {summary.aiRun?.status ?? "saved"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {summary.generatedForUser?.name ?? "Unknown user"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No saved summaries yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </DataTableShell>
+        </CardContent>
+      </Card>
+    </PageContainer>
   )
+}
+
+function formatGeneratedAt(value: Date) {
+  return new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value)
+}
+
+function formatSummaryType(value: string) {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
+function getStatusVariant(status: string | null | undefined) {
+  if (status === "failed" || status === "fallback_failed") {
+    return "destructive"
+  }
+
+  if (status === "started") {
+    return "outline"
+  }
+
+  return "secondary"
 }

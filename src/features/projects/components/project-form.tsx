@@ -3,11 +3,13 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -102,7 +104,7 @@ export function ProjectForm({
 
       <FieldSet>
         <FieldGroup className="grid gap-4 md:grid-cols-2">
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "projectName")}>
             <FieldLabel htmlFor="projectName">Project name</FieldLabel>
             <Input
               id="projectName"
@@ -110,9 +112,11 @@ export function ProjectForm({
               defaultValue={project?.projectName ?? ""}
               placeholder="Sentul Modern Luxury Residence"
               required
+              aria-invalid={hasFieldError(state.fieldErrors, "projectName")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "projectName")} />
           </Field>
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "clientName")}>
             <FieldLabel htmlFor="clientName">Client name</FieldLabel>
             <Input
               id="clientName"
@@ -120,7 +124,9 @@ export function ProjectForm({
               defaultValue={project?.clientName ?? ""}
               placeholder="Mr. S"
               required
+              aria-invalid={hasFieldError(state.fieldErrors, "clientName")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "clientName")} />
           </Field>
           <Field>
             <FieldLabel htmlFor="clientPhone">Client phone</FieldLabel>
@@ -175,6 +181,7 @@ export function ProjectForm({
           <SelectField
             name="status"
             label="Status"
+            fieldErrors={state.fieldErrors}
             defaultValue={project?.status ?? "survey"}
             options={PROJECT_STATUSES.map((status) => ({
               value: status,
@@ -184,6 +191,7 @@ export function ProjectForm({
           <SelectField
             name="healthStatus"
             label="Health"
+            fieldErrors={state.fieldErrors}
             defaultValue={project?.healthStatus ?? "healthy"}
             options={PROJECT_HEALTH_STATUSES.map((status) => ({
               value: status,
@@ -193,13 +201,16 @@ export function ProjectForm({
           <SelectField
             name="priority"
             label="Priority"
+            fieldErrors={state.fieldErrors}
             defaultValue={project?.priority ?? "medium"}
             options={PROJECT_PRIORITIES.map((priority) => ({
               value: priority,
               label: projectPriorityLabels[priority],
             }))}
           />
-          <Field>
+          <Field
+            data-invalid={hasFieldError(state.fieldErrors, "progressPercentage")}
+          >
             <FieldLabel htmlFor="progressPercentage">Progress</FieldLabel>
             <Input
               id="progressPercentage"
@@ -208,12 +219,20 @@ export function ProjectForm({
               min={0}
               max={100}
               defaultValue={project?.progressPercentage ?? 0}
+              aria-invalid={hasFieldError(
+                state.fieldErrors,
+                "progressPercentage",
+              )}
             />
             <FieldDescription>Use 0 to 100.</FieldDescription>
+            <FieldError
+              errors={getFieldErrors(state.fieldErrors, "progressPercentage")}
+            />
           </Field>
           <SelectField
             name="budgetWarningStatus"
             label="Budget warning"
+            fieldErrors={state.fieldErrors}
             defaultValue={project?.budgetWarningStatus ?? "none"}
             options={BUDGET_WARNING_STATUSES.map((status) => ({
               value: status,
@@ -223,6 +242,7 @@ export function ProjectForm({
           <SelectField
             name="contentReadyStatus"
             label="Content readiness"
+            fieldErrors={state.fieldErrors}
             defaultValue={project?.contentReadyStatus ?? "not_ready"}
             options={CONTENT_READY_STATUSES.map((status) => ({
               value: status,
@@ -264,6 +284,7 @@ export function ProjectForm({
           <SelectField
             name="pmId"
             label="Project manager"
+            fieldErrors={state.fieldErrors}
             defaultValue={project?.pmId ?? "unassigned"}
             placeholder="Assign PM"
             options={[
@@ -277,6 +298,7 @@ export function ProjectForm({
           <SelectField
             name="designerId"
             label="Designer"
+            fieldErrors={state.fieldErrors}
             defaultValue={project?.designerId ?? "unassigned"}
             placeholder="Assign designer"
             options={[
@@ -287,7 +309,7 @@ export function ProjectForm({
               })),
             ]}
           />
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "estimatedValue")}>
             <FieldLabel htmlFor="estimatedValue">Estimated value</FieldLabel>
             <Input
               id="estimatedValue"
@@ -295,6 +317,10 @@ export function ProjectForm({
               inputMode="decimal"
               defaultValue={project?.estimatedValue ?? ""}
               placeholder="380000000"
+              aria-invalid={hasFieldError(state.fieldErrors, "estimatedValue")}
+            />
+            <FieldError
+              errors={getFieldErrors(state.fieldErrors, "estimatedValue")}
             />
           </Field>
         </FieldGroup>
@@ -313,18 +339,22 @@ function SelectField({
   defaultValue,
   placeholder = "Select option",
   options,
+  fieldErrors,
 }: {
   name: string;
   label: string;
   defaultValue: string;
   placeholder?: string;
   options: Array<{ value: string; label: string }>;
+  fieldErrors?: ProjectActionState["fieldErrors"];
 }) {
+  const invalid = hasFieldError(fieldErrors, name);
+
   return (
-    <Field>
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Select name={name} defaultValue={defaultValue}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-invalid={invalid}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -337,6 +367,7 @@ function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <FieldError errors={getFieldErrors(fieldErrors, name)} />
     </Field>
   );
 }

@@ -1,6 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  AiGenerativeIcon,
   ChartUpIcon,
   Folder01Icon,
   PackageIcon,
@@ -9,9 +8,12 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container"
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table"
 import { MetricCard } from "@/components/shared/metric-card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -41,6 +43,7 @@ import {
   MaterialUrgencyBadge,
 } from "@/src/features/materials/components/material-badges"
 import { LeadStatusBadge } from "@/src/features/leads/components/lead-badges"
+import { GenerateAiSummaryButton } from "@/src/features/ai-summary/components/generate-ai-summary-button"
 import {
   getDesignTaskMetrics,
   getPendingDesignTasksQuery,
@@ -53,8 +56,10 @@ import {
   getDashboardLeads,
   getSalesSnapshot,
 } from "@/src/server/actions/leads"
+import { getLatestAiSummary } from "@/src/server/actions/ai-summary"
 import { getContentReadyProjects } from "@/src/server/actions/content"
 import { getMaterialIssues } from "@/src/server/actions/materials"
+import { requirePageUser } from "@/src/lib/auth/permissions"
 
 const projectRows = [
   ["Kebayoran Residence", "Build", "At risk", "Material ETA pending"],
@@ -81,6 +86,7 @@ const snapshotCards = [
 ]
 
 export default async function DashboardPage() {
+  const currentUser = await requirePageUser()
   const [
     projectMetrics,
     designMetrics,
@@ -91,6 +97,7 @@ export default async function DashboardPage() {
     materialIssues,
     dashboardLeads,
     contentReadyProjects,
+    latestAiSummary,
   ] = await Promise.all([
     getProjectMetrics(),
     getDesignTaskMetrics(),
@@ -101,6 +108,7 @@ export default async function DashboardPage() {
     getMaterialIssues(4),
     getDashboardLeads(4),
     getContentReadyProjects(4),
+    getLatestAiSummary(),
   ])
 
   const metrics = [
@@ -178,10 +186,9 @@ export default async function DashboardPage() {
         title="Owner Dashboard"
         description="Ringkasan kondisi operasional hari ini untuk project, design, material, sales, content, dan AI summary."
         action={
-          <Button>
-            <HugeiconsIcon icon={AiGenerativeIcon} strokeWidth={2} data-icon="inline-start" />
-            Generate AI Summary
-          </Button>
+          ["owner", "admin"].includes(currentUser.role) ? (
+            <GenerateAiSummaryButton />
+          ) : null
         }
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -195,20 +202,36 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>AI Morning Summary</CardTitle>
               <CardDescription>
-                Bahasa Indonesia, concise, actionable, and grounded in ERP data.
+                Latest owner briefing generated from live ERP data.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <p className="text-sm leading-6">
-                Operasional hari ini cukup stabil, tetapi owner perlu memantau
-                empat project dengan risiko material dan satu project yang belum
-                mengirim update PM terbaru.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Badge>Owner action</Badge>
-                <Badge variant="secondary">Material follow-up</Badge>
-                <Badge variant="outline">DED review</Badge>
-              </div>
+              {latestAiSummary ? (
+                <>
+                  <p className="whitespace-pre-wrap text-sm leading-6">
+                    {latestAiSummary.content}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge>{latestAiSummary.aiRun?.status ?? "saved"}</Badge>
+                    <Badge variant="secondary">
+                      {latestAiSummary.aiRun?.modelName ?? "Model not logged"}
+                    </Badge>
+                    <Badge variant="outline">
+                      Reasoning{" "}
+                      {latestAiSummary.aiRun?.reasoningLevel ?? "not logged"}
+                    </Badge>
+                    <Badge variant="outline">
+                      {formatGeneratedAt(latestAiSummary.createdAt)}
+                    </Badge>
+                  </div>
+                </>
+              ) : (
+                <RecordEmptyState
+                  title="No AI summary yet"
+                  description="Owner or admin users can generate the first morning summary from this dashboard."
+                  className="p-8"
+                />
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -219,7 +242,7 @@ export default async function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto rounded-xl border">
+              <DataTableShell>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -246,7 +269,7 @@ export default async function DashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </DataTableShell>
             </CardContent>
           </Card>
         </div>
@@ -293,9 +316,11 @@ export default async function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                  No PM updates recorded yet.
-                </div>
+                <RecordEmptyState
+                  title="No PM updates"
+                  description="Daily PM progress reports will appear here once submitted."
+                  className="p-6"
+                />
               )}
             </CardContent>
           </Card>
@@ -328,9 +353,11 @@ export default async function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                  No pending design tasks.
-                </div>
+                <RecordEmptyState
+                  title="No pending design tasks"
+                  description="Open render, revision, approval, and DED work will appear here."
+                  className="p-6"
+                />
               )}
             </CardContent>
           </Card>
@@ -368,9 +395,11 @@ export default async function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                  No delayed, high, or critical material issues.
-                </div>
+                <RecordEmptyState
+                  title="No material warnings"
+                  description="Delayed, high, and critical purchasing issues will appear here."
+                  className="p-6"
+                />
               )}
             </CardContent>
           </Card>
@@ -410,9 +439,11 @@ export default async function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                  No content-ready projects yet.
-                </div>
+                <RecordEmptyState
+                  title="No content-ready projects"
+                  description="Shoot, footage, and publishing opportunities will appear here."
+                  className="p-6"
+                />
               )}
             </CardContent>
           </Card>
@@ -473,9 +504,11 @@ export default async function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                  No new, hot, or due follow-up leads.
-                </div>
+                <RecordEmptyState
+                  title="No sales follow-ups"
+                  description="New, hot, and due follow-up leads will appear here."
+                  className="p-6"
+                />
               )}
             </CardContent>
           </Card>
@@ -483,4 +516,14 @@ export default async function DashboardPage() {
       </div>
     </PageContainer>
   )
+}
+
+function formatGeneratedAt(value: Date) {
+  return new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value)
 }

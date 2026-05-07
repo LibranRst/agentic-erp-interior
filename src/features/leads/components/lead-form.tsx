@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { MediaUploader } from "@/components/shared/media-uploader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -101,7 +103,7 @@ export function LeadForm({
 
       <FieldSet>
         <FieldGroup className="grid gap-4 md:grid-cols-2">
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "leadName")}>
             <FieldLabel htmlFor="leadName">Lead name</FieldLabel>
             <Input
               id="leadName"
@@ -109,11 +111,14 @@ export function LeadForm({
               defaultValue={lead?.leadName ?? ""}
               placeholder="Mrs. Nadia"
               required
+              aria-invalid={hasFieldError(state.fieldErrors, "leadName")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "leadName")} />
           </Field>
           <SelectField
             name="status"
             label="Status"
+            fieldErrors={state.fieldErrors}
             defaultValue={lead?.status ?? "new"}
             options={statusOptions.map((status) => ({
               value: status,
@@ -129,7 +134,7 @@ export function LeadForm({
               placeholder="0812..."
             />
           </Field>
-          <Field>
+          <Field data-invalid={hasFieldError(state.fieldErrors, "email")}>
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input
               id="email"
@@ -137,9 +142,13 @@ export function LeadForm({
               type="email"
               defaultValue={lead?.email ?? ""}
               placeholder="client@example.com"
+              aria-invalid={hasFieldError(state.fieldErrors, "email")}
             />
+            <FieldError errors={getFieldErrors(state.fieldErrors, "email")} />
           </Field>
-          <Field>
+          <Field
+            data-invalid={hasFieldError(state.fieldErrors, "estimatedProjectValue")}
+          >
             <FieldLabel htmlFor="source">Source</FieldLabel>
             <Input
               id="source"
@@ -158,11 +167,19 @@ export function LeadForm({
               inputMode="decimal"
               defaultValue={lead?.estimatedProjectValue ?? ""}
               placeholder="250000000"
+              aria-invalid={hasFieldError(
+                state.fieldErrors,
+                "estimatedProjectValue",
+              )}
+            />
+            <FieldError
+              errors={getFieldErrors(state.fieldErrors, "estimatedProjectValue")}
             />
           </Field>
           <SelectField
             name="assignedSalesId"
             label="Assigned sales"
+            fieldErrors={state.fieldErrors}
             defaultValue={lead?.assignedSalesId ?? "unassigned"}
             placeholder="Assign sales"
             options={[
@@ -236,18 +253,22 @@ function SelectField({
   defaultValue,
   placeholder = "Select option",
   options,
+  fieldErrors,
 }: {
   name: string;
   label: string;
   defaultValue: string;
   placeholder?: string;
   options: Array<{ value: string; label: string }>;
+  fieldErrors?: LeadActionState["fieldErrors"];
 }) {
+  const invalid = hasFieldError(fieldErrors, name);
+
   return (
-    <Field>
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Select name={name} defaultValue={defaultValue}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-invalid={invalid}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -260,6 +281,7 @@ function SelectField({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <FieldError errors={getFieldErrors(fieldErrors, name)} />
     </Field>
   );
 }

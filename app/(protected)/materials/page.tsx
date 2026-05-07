@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table";
 import { MetricCard } from "@/components/shared/metric-card";
 import {
   Card,
@@ -9,12 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -110,7 +108,7 @@ export default async function MaterialsPage({
           <MaterialFilters filters={materialFilters} options={options} />
 
           {materials.length > 0 ? (
-            <div className="min-w-0 rounded-xl border">
+            <DataTableShell>
               <Table className="min-w-[1120px]">
                 <TableHeader>
                   <TableRow>
@@ -189,17 +187,12 @@ export default async function MaterialsPage({
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </DataTableShell>
           ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>No materials found</EmptyTitle>
-                <EmptyDescription>
-                  Adjust the filters or create the first material issue for
-                  purchasing visibility.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <RecordEmptyState
+              title="No materials found"
+              description="Adjust the filters or create the first material issue for purchasing visibility."
+            />
           )}
         </CardContent>
       </Card>

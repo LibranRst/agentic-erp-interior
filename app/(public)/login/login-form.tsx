@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Card,
   CardContent,
@@ -63,25 +64,29 @@ function LoginForm({ nextPath }: { nextPath?: string }) {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Email
-            <Input
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="owner@dekoria.local"
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Password
-            <Input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
+          <FieldGroup className="gap-4">
+            <Field>
+              <FieldLabel htmlFor="login-email">Email</FieldLabel>
+              <Input
+                id="login-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="owner@dekoria.local"
+                required
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="login-password">Password</FieldLabel>
+              <Input
+                id="login-password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </Field>
+          </FieldGroup>
           <Button type="submit" disabled={isPending}>
             {isPending ? "Signing in..." : "Sign in"}
           </Button>
