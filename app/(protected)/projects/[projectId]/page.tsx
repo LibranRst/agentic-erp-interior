@@ -261,6 +261,7 @@ export default async function ProjectDetailPage({
             action={
               dailyUpdateOptions ? (
                 <DailyUpdateDialog
+                  mode="create"
                   options={dailyUpdateOptions}
                   defaultProjectId={project.id}
                 />

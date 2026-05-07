@@ -31,7 +31,7 @@ export default async function DailyUpdatesPage({
       <PageHeader
         title="Daily Updates"
         description="Structured daily PM reports for progress, blockers, work completed, next action, and ImageKit-backed evidence."
-        action={<DailyUpdateDialog options={data.options} />}
+        action={<DailyUpdateDialog mode="create" options={data.options} />}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -67,7 +67,7 @@ export default async function DailyUpdatesPage({
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
           <DailyUpdateFilters filters={data.filters} options={data.options} />
-          <DailyUpdateTable updates={data.updates} />
+          <DailyUpdateTable updates={data.updates} formOptions={data.options} />
         </CardContent>
       </Card>
     </PageContainer>

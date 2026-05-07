@@ -21,13 +21,16 @@ import {
 } from "@/components/ui/table";
 import { formatDate } from "@/src/features/projects/utils";
 
-import type { DailyUpdateListItem } from "../queries";
+import type { DailyUpdateFormOptions, DailyUpdateListItem } from "../queries";
 import { DailyUpdateHealthBadge } from "./daily-update-badges";
+import { DailyUpdateDialog } from "./daily-update-dialog";
 
 export function DailyUpdateTable({
   updates,
+  formOptions,
 }: {
   updates: DailyUpdateListItem[];
+  formOptions?: DailyUpdateFormOptions;
 }) {
   if (updates.length === 0) {
     return (
@@ -51,7 +54,7 @@ export function DailyUpdateTable({
             <TableHead>Health</TableHead>
             <TableHead>Progress</TableHead>
             <TableHead>Attachments</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -105,16 +108,25 @@ export function DailyUpdateTable({
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/projects/${update.projectId}`}>
-                    Open
-                    <HugeiconsIcon
-                      icon={ArrowRight01Icon}
-                      strokeWidth={2}
-                      data-icon="inline-end"
+                <div className="flex items-center justify-end gap-2">
+                  {formOptions ? (
+                    <DailyUpdateDialog
+                      mode="edit"
+                      options={formOptions}
+                      update={update}
                     />
-                  </Link>
-                </Button>
+                  ) : null}
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/projects/${update.projectId}`}>
+                      Open
+                      <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        strokeWidth={2}
+                        data-icon="inline-end"
+                      />
+                    </Link>
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}

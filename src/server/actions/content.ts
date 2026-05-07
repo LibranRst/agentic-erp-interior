@@ -20,6 +20,7 @@ import {
   contentReadinessRank,
   type ContentStatus,
 } from "@/src/features/content/constants";
+import type { CurrentUser } from "@/src/lib/auth/permissions";
 import {
   requirePermission,
   requireRole,
@@ -151,6 +152,15 @@ export async function updateContentAssetAction(
     return projectCheck;
   }
 
+  const ownershipCheck = await validateContentOwnership(
+    parsedAssetId.data,
+    currentUser,
+  );
+
+  if (ownershipCheck) {
+    return ownershipCheck;
+  }
+
   const [asset] = await db
     .update(schema.contentAssets)
     .set(toContentAssetValues(parsed.data, currentUser.id))
@@ -213,6 +223,15 @@ export async function updateContentStatusAction(
     };
   }
 
+  const ownershipCheck = await validateContentOwnership(
+    parsedAssetId.data,
+    currentUser,
+  );
+
+  if (ownershipCheck) {
+    return ownershipCheck;
+  }
+
   const [asset] = await db
     .update(schema.contentAssets)
     .set({
@@ -266,6 +285,7 @@ async function validateContentProject(
     where: eq(schema.projects.id, projectId),
     columns: {
       id: true,
+      status: true,
     },
   });
 
@@ -273,6 +293,51 @@ async function validateContentProject(
     return {
       status: "error",
       message: "Project was not found.",
+    };
+  }
+
+  if (project.status === "completed" || project.status === "cancelled") {
+    return {
+      status: "error",
+      message:
+        "Content updates are not allowed for completed or cancelled projects.",
+    };
+  }
+
+  return null;
+}
+
+async function validateContentOwnership(
+  contentAssetId: string,
+  currentUser: CurrentUser,
+): Promise<ContentAssetActionState | null> {
+  if (currentUser.role === "owner" || currentUser.role === "admin") {
+    return null;
+  }
+
+  const asset = await db.query.contentAssets.findFirst({
+    where: eq(schema.contentAssets.id, contentAssetId),
+    columns: {
+      id: true,
+      assignedTo: true,
+    },
+  });
+
+  if (!asset) {
+    return {
+      status: "error",
+      message: "Content asset was not found.",
+    };
+  }
+
+  if (
+    currentUser.role === "marketing" &&
+    asset.assignedTo !== currentUser.id
+  ) {
+    return {
+      status: "error",
+      message:
+        "Marketing users can only update content assets assigned to them.",
     };
   }
 

@@ -2,6 +2,7 @@ import {
   AiGenerativeIcon,
   Calendar03Icon,
   DashboardSquare01Icon,
+  DeliveryTruck02Icon,
   FileImageIcon,
   Folder01Icon,
   Image02Icon,
@@ -61,6 +62,13 @@ export const appNavItems = [
     href: "/materials",
     icon: PackageIcon,
     description: "Material and vendor issues",
+    allowedRoles: ["owner", "admin", "purchasing"],
+  },
+  {
+    title: "Vendors",
+    href: "/vendors",
+    icon: DeliveryTruck02Icon,
+    description: "Supplier management",
     allowedRoles: ["owner", "admin", "purchasing"],
   },
   {

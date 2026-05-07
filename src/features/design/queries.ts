@@ -10,7 +10,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 
-import type { RoleName } from "@/src/lib/auth/permissions";
+import type { CurrentUser, RoleName } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
 
 import {
@@ -56,9 +56,20 @@ export async function getDesignTasksQuery(filters: DesignTaskFilters = {}) {
   return attachMedia(tasks);
 }
 
-export async function getPendingDesignTasksQuery(limit = 6) {
+export async function getPendingDesignTasksQuery(
+  limit = 6,
+  currentUser?: CurrentUser,
+) {
+  const conditions: SQL[] = [
+    inArray(schema.designTasks.status, [...PENDING_DESIGN_TASK_STATUSES]),
+  ];
+  const scope = buildDesignTaskRoleScope(currentUser);
+  if (scope) {
+    conditions.push(scope);
+  }
+
   const tasks = await db.query.designTasks.findMany({
-    where: inArray(schema.designTasks.status, [...PENDING_DESIGN_TASK_STATUSES]),
+    where: and(...conditions),
     with: {
       project: {
         columns: {
@@ -85,24 +96,33 @@ export async function getPendingDesignTasksQuery(limit = 6) {
   return attachMedia(tasks);
 }
 
-export async function getDesignTaskMetrics() {
+export async function getDesignTaskMetrics(currentUser?: CurrentUser) {
+  const scope = buildDesignTaskRoleScope(currentUser);
+  const buildWhere = (condition: SQL) => (scope ? and(condition, scope) : condition);
+
   const [pending, waitingApproval, dedProgress, blocked] = await Promise.all([
     db
       .select({ value: count() })
       .from(schema.designTasks)
-      .where(inArray(schema.designTasks.status, [...PENDING_DESIGN_TASK_STATUSES])),
+      .where(
+        buildWhere(
+          inArray(schema.designTasks.status, [...PENDING_DESIGN_TASK_STATUSES]),
+        ),
+      ),
     db
       .select({ value: count() })
       .from(schema.designTasks)
-      .where(eq(schema.designTasks.approvalStatus, "waiting_approval")),
+      .where(
+        buildWhere(eq(schema.designTasks.approvalStatus, "waiting_approval")),
+      ),
     db
       .select({ value: count() })
       .from(schema.designTasks)
-      .where(eq(schema.designTasks.status, "ded_progress")),
+      .where(buildWhere(eq(schema.designTasks.status, "ded_progress"))),
     db
       .select({ value: count() })
       .from(schema.designTasks)
-      .where(eq(schema.designTasks.status, "blocked")),
+      .where(buildWhere(eq(schema.designTasks.status, "blocked"))),
   ]);
 
   return {
@@ -221,6 +241,14 @@ async function attachMedia<
     ...task,
     mediaAssets: mediaByTaskId.get(task.id) ?? [],
   }));
+}
+
+function buildDesignTaskRoleScope(currentUser?: CurrentUser) {
+  if (!currentUser || currentUser.role !== "designer") {
+    return undefined;
+  }
+
+  return eq(schema.designTasks.designerId, currentUser.id);
 }
 
 async function getActiveUsersByRoles(roleNames: readonly RoleName[]) {

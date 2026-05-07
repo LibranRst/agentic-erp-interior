@@ -28,7 +28,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { UploadedMediaInput } from "@/src/features/media/schemas";
 import { toDateInputValue } from "@/src/features/projects/utils";
-import { createDailyUpdateAction } from "@/src/server/actions/daily-updates";
+import {
+  createDailyUpdateAction,
+  updateDailyUpdateAction,
+} from "@/src/server/actions/daily-updates";
 
 import {
   DAILY_UPDATE_HEALTH_STATUSES,
@@ -44,15 +47,36 @@ const initialState: DailyUpdateActionState = {
 export function DailyUpdateForm({
   options,
   defaultProjectId,
+  mode = "create",
+  initialData,
+  dailyUpdateId,
 }: {
   options: DailyUpdateFormOptions;
   defaultProjectId?: string;
+  mode?: "create" | "edit";
+  initialData?: {
+    id: string;
+    projectId: string;
+    updateDate: string;
+    progressSummary: string;
+    workCompleted: string | null;
+    issueNotes: string | null;
+    blockerNotes: string | null;
+    nextAction: string | null;
+    progressPercentage: number | null;
+    healthStatus: string | null;
+  };
+  dailyUpdateId?: string;
 }) {
-  const [state, formAction] = useActionState(
-    createDailyUpdateAction,
-    initialState,
+  const boundAction =
+    mode === "edit" && dailyUpdateId
+      ? updateDailyUpdateAction.bind(null, dailyUpdateId)
+      : createDailyUpdateAction;
+
+  const [state, formAction] = useActionState(boundAction, initialState);
+  const [projectId, setProjectId] = useState(
+    initialData?.projectId ?? defaultProjectId ?? "",
   );
-  const [projectId, setProjectId] = useState(defaultProjectId ?? "");
   const [uploadedMedia, setUploadedMedia] = useState<UploadedMediaInput[]>([]);
   const selectedProject = useMemo(
     () => options.projects.find((project) => project.id === projectId),
@@ -94,7 +118,7 @@ export function DailyUpdateForm({
               id="updateDate"
               name="updateDate"
               type="date"
-              defaultValue={toDateInputValue(new Date())}
+              defaultValue={initialData?.updateDate ?? toDateInputValue(new Date())}
               required
               aria-invalid={hasFieldError(state.fieldErrors, "updateDate")}
             />
@@ -109,6 +133,7 @@ export function DailyUpdateForm({
               id="progressSummary"
               name="progressSummary"
               placeholder="Ringkas progress hari ini, kondisi site, atau milestone utama"
+              defaultValue={initialData?.progressSummary}
               required
               aria-invalid={hasFieldError(
                 state.fieldErrors,
@@ -125,6 +150,7 @@ export function DailyUpdateForm({
               id="workCompleted"
               name="workCompleted"
               placeholder="Pekerjaan selesai, area yang dikerjakan, atau aktivitas vendor"
+              defaultValue={initialData?.workCompleted ?? ""}
             />
           </Field>
           <Field>
@@ -133,6 +159,7 @@ export function DailyUpdateForm({
               id="issueNotes"
               name="issueNotes"
               placeholder="Catatan issue non-blocking"
+              defaultValue={initialData?.issueNotes ?? ""}
             />
           </Field>
           <Field>
@@ -141,6 +168,7 @@ export function DailyUpdateForm({
               id="blockerNotes"
               name="blockerNotes"
               placeholder="Hambatan yang butuh follow-up"
+              defaultValue={initialData?.blockerNotes ?? ""}
             />
           </Field>
           <Field className="md:col-span-2">
@@ -149,6 +177,7 @@ export function DailyUpdateForm({
               id="nextAction"
               name="nextAction"
               placeholder="Langkah berikutnya untuk PM, vendor, designer, atau owner"
+              defaultValue={initialData?.nextAction ?? ""}
             />
           </Field>
           <Field
@@ -161,7 +190,7 @@ export function DailyUpdateForm({
               type="number"
               min={0}
               max={100}
-              defaultValue={selectedProject?.progressPercentage ?? 0}
+              defaultValue={initialData?.progressPercentage ?? selectedProject?.progressPercentage ?? 0}
               aria-invalid={hasFieldError(
                 state.fieldErrors,
                 "progressPercentage",
@@ -178,7 +207,7 @@ export function DailyUpdateForm({
             name="healthStatus"
             label="Health status"
             fieldErrors={state.fieldErrors}
-            defaultValue={selectedProject?.healthStatus ?? "healthy"}
+            defaultValue={initialData?.healthStatus ?? selectedProject?.healthStatus ?? "healthy"}
             options={DAILY_UPDATE_HEALTH_STATUSES.map((healthStatus) => ({
               value: healthStatus,
               label: dailyUpdateHealthLabels[healthStatus],
@@ -204,7 +233,7 @@ export function DailyUpdateForm({
       </FieldSet>
 
       <div className="flex justify-end gap-2">
-        <SubmitButton />
+        <SubmitButton mode={mode} />
       </div>
     </form>
   );
@@ -256,12 +285,16 @@ function SelectField({
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
 
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? "Creating update..." : "Create update"}
+      {pending
+        ? "Saving..."
+        : mode === "edit"
+          ? "Save changes"
+          : "Create report"}
     </Button>
   );
 }

@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm";
 
 import { db, schema } from "@/src/lib/db";
-import type { RoleName } from "@/src/lib/auth/permissions";
+import type { CurrentUser, RoleName } from "@/src/lib/auth/permissions";
 
 import {
   activeProjectStatuses,
@@ -134,38 +134,50 @@ export async function getProjectByIdQuery(projectId: string) {
   };
 }
 
-export async function getProjectMetrics() {
+export async function getProjectMetrics(currentUser?: CurrentUser) {
+  const scope = buildProjectRoleScope(currentUser);
+
+  const buildWhere = (condition: SQL) => (scope ? and(condition, scope) : condition);
+
   const [activeProjects, urgentProjects, designStageProjects, contentReadyProjects] =
     await Promise.all([
       db
         .select({ value: count() })
         .from(schema.projects)
-        .where(inArray(schema.projects.status, activeProjectStatuses)),
-      db
-        .select({ value: count() })
-        .from(schema.projects)
         .where(
-          inArray(schema.projects.healthStatus, [
-            "urgent",
-            "blocked",
-            "delayed",
-          ] satisfies ProjectHealthStatus[]),
+          buildWhere(inArray(schema.projects.status, activeProjectStatuses)),
         ),
       db
         .select({ value: count() })
         .from(schema.projects)
-        .where(inArray(schema.projects.status, [...designProjectStatuses])),
+        .where(
+          buildWhere(
+            inArray(schema.projects.healthStatus, [
+              "urgent",
+              "blocked",
+              "delayed",
+            ] satisfies ProjectHealthStatus[]),
+          ),
+        ),
       db
         .select({ value: count() })
         .from(schema.projects)
         .where(
-          inArray(schema.projects.contentReadyStatus, [
-            "ready_to_shoot",
-            "footage_available",
-            "editing",
-            "ready_to_publish",
-            "published",
-          ]),
+          buildWhere(inArray(schema.projects.status, [...designProjectStatuses])),
+        ),
+      db
+        .select({ value: count() })
+        .from(schema.projects)
+        .where(
+          buildWhere(
+            inArray(schema.projects.contentReadyStatus, [
+              "ready_to_shoot",
+              "footage_available",
+              "editing",
+              "ready_to_publish",
+              "published",
+            ]),
+          ),
         ),
     ]);
 
@@ -177,9 +189,16 @@ export async function getProjectMetrics() {
   };
 }
 
-export async function getProjectHealthOverviewQuery(limit = 5) {
+export async function getProjectHealthOverviewQuery(
+  limit = 5,
+  currentUser?: CurrentUser,
+) {
+  const scope = buildProjectRoleScope(currentUser);
+  const conditions: SQL[] = [inArray(schema.projects.status, activeProjectStatuses)];
+  if (scope) conditions.push(scope);
+
   return db.query.projects.findMany({
-    where: inArray(schema.projects.status, activeProjectStatuses),
+    where: and(...conditions),
     columns: {
       id: true,
       projectName: true,
@@ -198,13 +217,22 @@ export async function getProjectHealthOverviewQuery(limit = 5) {
   });
 }
 
-export async function getUrgentProjectOverviewQuery(limit = 5) {
-  return db.query.projects.findMany({
-    where: inArray(schema.projects.healthStatus, [
+export async function getUrgentProjectOverviewQuery(
+  limit = 5,
+  currentUser?: CurrentUser,
+) {
+  const scope = buildProjectRoleScope(currentUser);
+  const conditions: SQL[] = [
+    inArray(schema.projects.healthStatus, [
       "urgent",
       "blocked",
       "delayed",
     ] satisfies ProjectHealthStatus[]),
+  ];
+  if (scope) conditions.push(scope);
+
+  return db.query.projects.findMany({
+    where: and(...conditions),
     columns: {
       id: true,
       projectName: true,
@@ -270,6 +298,14 @@ function buildProjectWhere(filters: ProjectFilters) {
   }
 
   return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+function buildProjectRoleScope(currentUser?: CurrentUser) {
+  if (!currentUser || currentUser.role !== "project_manager") {
+    return undefined;
+  }
+
+  return eq(schema.projects.pmId, currentUser.id);
 }
 
 async function getActiveUsersByRoles(roleNames: readonly RoleName[]) {

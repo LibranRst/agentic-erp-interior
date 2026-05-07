@@ -5,17 +5,9 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/src/lib/db";
 
-export const ROLE_NAMES = [
-  "owner",
-  "admin",
-  "project_manager",
-  "designer",
-  "purchasing",
-  "sales",
-  "marketing",
-] as const;
+import { ROLE_NAMES, type RoleName } from "./role-constants";
 
-export type RoleName = (typeof ROLE_NAMES)[number];
+export { ROLE_NAMES, type RoleName };
 
 export const FULL_ACCESS_ROLES = ["owner", "admin"] as const;
 

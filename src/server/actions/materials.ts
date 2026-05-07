@@ -16,6 +16,7 @@ import {
   type MaterialActionState,
   type MaterialMutationInput,
 } from "@/src/features/materials/schemas";
+import type { CurrentUser } from "@/src/lib/auth/permissions";
 import {
   requirePermission,
   requireRole,
@@ -134,6 +135,15 @@ export async function updateMaterialAction(
     return projectCheck;
   }
 
+  const ownershipCheck = await validateMaterialOwnership(
+    parsedMaterialId.data,
+    currentUser,
+  );
+
+  if (ownershipCheck) {
+    return ownershipCheck;
+  }
+
   const [material] = await db
     .update(schema.materials)
     .set(toMaterialValues(parsed.data, currentUser.id))
@@ -186,6 +196,15 @@ export async function updateMaterialStatusAction(
     };
   }
 
+  const ownershipCheck = await validateMaterialOwnership(
+    parsedMaterialId.data,
+    currentUser,
+  );
+
+  if (ownershipCheck) {
+    return ownershipCheck;
+  }
+
   return updateMaterialFields(parsedMaterialId.data, currentUser.id, {
     status: parsed.data.status,
   });
@@ -209,6 +228,15 @@ export async function updateMaterialUrgencyAction(
         getFirstZodMessage(parsedMaterialId, parsed) ??
         "Material urgency is invalid.",
     };
+  }
+
+  const ownershipCheck = await validateMaterialOwnership(
+    parsedMaterialId.data,
+    currentUser,
+  );
+
+  if (ownershipCheck) {
+    return ownershipCheck;
   }
 
   return updateMaterialFields(parsedMaterialId.data, currentUser.id, {
@@ -239,6 +267,7 @@ async function validateMaterialProject(
     where: eq(schema.projects.id, projectId),
     columns: {
       id: true,
+      status: true,
     },
   });
 
@@ -246,6 +275,51 @@ async function validateMaterialProject(
     return {
       status: "error",
       message: "Project was not found.",
+    };
+  }
+
+  if (project.status === "completed" || project.status === "cancelled") {
+    return {
+      status: "error",
+      message:
+        "Material updates are not allowed for completed or cancelled projects.",
+    };
+  }
+
+  return null;
+}
+
+async function validateMaterialOwnership(
+  materialId: string,
+  currentUser: CurrentUser,
+): Promise<MaterialActionState | null> {
+  if (currentUser.role === "owner" || currentUser.role === "admin") {
+    return null;
+  }
+
+  const material = await db.query.materials.findFirst({
+    where: eq(schema.materials.id, materialId),
+    columns: {
+      id: true,
+      updatedBy: true,
+    },
+  });
+
+  if (!material) {
+    return {
+      status: "error",
+      message: "Material issue was not found.",
+    };
+  }
+
+  if (
+    currentUser.role === "purchasing" &&
+    material.updatedBy !== currentUser.id
+  ) {
+    return {
+      status: "error",
+      message:
+        "Purchasing users can only update material issues they created.",
     };
   }
 

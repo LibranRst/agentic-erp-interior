@@ -2,7 +2,7 @@
 
 import { randomBytes } from "node:crypto";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -244,6 +244,117 @@ export async function getUsersAndInvites() {
   ]);
 
   return { users, invites };
+}
+
+const updateUserRoleSchema = z.object({
+  userId: z.uuid("User id is invalid."),
+  role: z.enum(ROLE_NAMES),
+});
+
+export async function updateUserRoleAction(input: unknown) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "user:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = updateUserRoleSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Role data is invalid.",
+    };
+  }
+
+  if (parsed.data.userId === currentUser.id) {
+    return {
+      status: "error",
+      message: "You cannot change your own role.",
+    };
+  }
+
+  const role = await db.query.roles.findFirst({
+    where: eq(schema.roles.name, parsed.data.role),
+  });
+
+  if (!role) {
+    return {
+      status: "error",
+      message: `Role ${parsed.data.role} has not been seeded.`,
+    };
+  }
+
+  const [updated] = await db
+    .update(schema.users)
+    .set({ roleId: role.id })
+    .where(
+      and(
+        eq(schema.users.id, parsed.data.userId),
+        ne(schema.users.roleId, role.id),
+      ),
+    )
+    .returning({ id: schema.users.id });
+
+  if (!updated) {
+    return {
+      status: "error",
+      message: "User not found or already has this role.",
+    };
+  }
+
+  return {
+    status: "success",
+    message: "Role updated.",
+  };
+}
+
+const updateUserStatusSchema = z.object({
+  userId: z.uuid("User id is invalid."),
+  status: z.enum(["active", "inactive"]),
+});
+
+export async function updateUserStatusAction(input: unknown) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "user:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = updateUserStatusSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Status data is invalid.",
+    };
+  }
+
+  if (parsed.data.userId === currentUser.id) {
+    return {
+      status: "error",
+      message: "You cannot change your own status.",
+    };
+  }
+
+  const [updated] = await db
+    .update(schema.users)
+    .set({ status: parsed.data.status })
+    .where(
+      and(
+        eq(schema.users.id, parsed.data.userId),
+        ne(schema.users.status, parsed.data.status),
+      ),
+    )
+    .returning({ id: schema.users.id });
+
+  if (!updated) {
+    return {
+      status: "error",
+      message: "User not found or already has this status.",
+    };
+  }
+
+  return {
+    status: "success",
+    message: "Status updated.",
+  };
 }
 
 function buildInviteUrl(token: string) {

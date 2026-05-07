@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { RoleName } from "@/src/lib/auth/permissions";
+import type { RoleName } from "@/src/lib/auth/role-constants";
 
 export function hashInviteToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
