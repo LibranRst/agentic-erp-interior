@@ -10,6 +10,8 @@ import {
 } from "@/src/features/materials/queries";
 import {
   materialFiltersSchema,
+  materialStatusUpdateSchema,
+  materialUrgencyUpdateSchema,
   parseMaterialFormData,
   type MaterialActionState,
   type MaterialMutationInput,
@@ -58,6 +60,12 @@ export async function createMaterialAction(
       message: getZodMessage(parsed.error),
       fieldErrors: getZodFieldErrors(parsed.error),
     };
+  }
+
+  const projectCheck = await validateMaterialProject(parsed.data.projectId);
+
+  if (projectCheck) {
+    return projectCheck;
   }
 
   const [material] = await db
@@ -120,6 +128,12 @@ export async function updateMaterialAction(
     };
   }
 
+  const projectCheck = await validateMaterialProject(parsed.data.projectId);
+
+  if (projectCheck) {
+    return projectCheck;
+  }
+
   const [material] = await db
     .update(schema.materials)
     .set(toMaterialValues(parsed.data, currentUser.id))
@@ -152,6 +166,56 @@ export async function updateMaterialAction(
   };
 }
 
+export async function updateMaterialStatusAction(
+  materialId: string,
+  input: unknown,
+): Promise<MaterialActionState> {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "material:update");
+  requireRole(currentUser, ["owner", "admin", "purchasing"]);
+
+  const parsedMaterialId = materialIdSchema.safeParse(materialId);
+  const parsed = materialStatusUpdateSchema.safeParse(input);
+
+  if (!parsedMaterialId.success || !parsed.success) {
+    return {
+      status: "error",
+      message:
+        getFirstZodMessage(parsedMaterialId, parsed) ??
+        "Material status is invalid.",
+    };
+  }
+
+  return updateMaterialFields(parsedMaterialId.data, currentUser.id, {
+    status: parsed.data.status,
+  });
+}
+
+export async function updateMaterialUrgencyAction(
+  materialId: string,
+  input: unknown,
+): Promise<MaterialActionState> {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "material:update");
+  requireRole(currentUser, ["owner", "admin", "purchasing"]);
+
+  const parsedMaterialId = materialIdSchema.safeParse(materialId);
+  const parsed = materialUrgencyUpdateSchema.safeParse(input);
+
+  if (!parsedMaterialId.success || !parsed.success) {
+    return {
+      status: "error",
+      message:
+        getFirstZodMessage(parsedMaterialId, parsed) ??
+        "Material urgency is invalid.",
+    };
+  }
+
+  return updateMaterialFields(parsedMaterialId.data, currentUser.id, {
+    urgencyLevel: parsed.data.urgencyLevel,
+  });
+}
+
 function toMaterialValues(data: MaterialMutationInput, updatedBy: string) {
   return {
     projectId: data.projectId,
@@ -168,6 +232,57 @@ function toMaterialValues(data: MaterialMutationInput, updatedBy: string) {
   } satisfies typeof schema.materials.$inferInsert;
 }
 
+async function validateMaterialProject(
+  projectId: string,
+): Promise<MaterialActionState | null> {
+  const project = await db.query.projects.findFirst({
+    where: eq(schema.projects.id, projectId),
+    columns: {
+      id: true,
+    },
+  });
+
+  if (!project) {
+    return {
+      status: "error",
+      message: "Project was not found.",
+    };
+  }
+
+  return null;
+}
+
+async function updateMaterialFields(
+  materialId: string,
+  updatedBy: string,
+  values: Partial<
+    Pick<typeof schema.materials.$inferInsert, "status" | "urgencyLevel">
+  >,
+): Promise<MaterialActionState> {
+  const [material] = await db
+    .update(schema.materials)
+    .set({ ...values, updatedBy })
+    .where(eq(schema.materials.id, materialId))
+    .returning({
+      id: schema.materials.id,
+      projectId: schema.materials.projectId,
+    });
+
+  if (!material) {
+    return {
+      status: "error",
+      message: "Material issue was not found.",
+    };
+  }
+
+  revalidateMaterialPaths(material.projectId);
+
+  return {
+    status: "success",
+    message: "Material issue updated.",
+  };
+}
+
 function revalidateMaterialPaths(projectId: string) {
   revalidatePath("/materials");
   revalidatePath("/dashboard");
@@ -176,4 +291,17 @@ function revalidateMaterialPaths(projectId: string) {
 
 function getZodMessage(error: z.ZodError) {
   return error.issues[0]?.message ?? "Material issue data is invalid.";
+}
+
+type SafeParseFailure = { success: false; error: z.ZodError };
+type SafeParseResult = { success: true } | SafeParseFailure;
+
+function getFirstZodMessage(...results: SafeParseResult[]) {
+  for (const result of results) {
+    if (!result.success) {
+      return result.error.issues[0]?.message;
+    }
+  }
+
+  return undefined;
 }

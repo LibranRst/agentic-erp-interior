@@ -88,9 +88,23 @@ export const materialFiltersSchema = z.object({
   ),
 });
 
+export const materialStatusUpdateSchema = z.object({
+  status: z.enum(MATERIAL_STATUSES),
+});
+
+export const materialUrgencyUpdateSchema = z.object({
+  urgencyLevel: z.enum(MATERIAL_URGENCY_LEVELS),
+});
+
 export type MaterialMutationInput = z.infer<typeof materialMutationSchema>;
 export type UploadedMaterialMediaInput = z.infer<typeof uploadedMediaSchema>;
 export type MaterialFilters = z.infer<typeof materialFiltersSchema>;
+export type MaterialStatusUpdateInput = z.infer<
+  typeof materialStatusUpdateSchema
+>;
+export type MaterialUrgencyUpdateInput = z.infer<
+  typeof materialUrgencyUpdateSchema
+>;
 
 export type MaterialActionState = FormActionState;
 

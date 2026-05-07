@@ -2,6 +2,7 @@ import {
   and,
   asc,
   count,
+  desc,
   eq,
   ilike,
   inArray,
@@ -22,6 +23,12 @@ import type { ProjectFilters } from "./schemas";
 export type ProjectListItem = Awaited<ReturnType<typeof getProjectsQuery>>[number];
 export type ProjectDetail = NonNullable<Awaited<ReturnType<typeof getProjectByIdQuery>>>;
 export type ProjectFormOptions = Awaited<ReturnType<typeof getProjectFormOptions>>;
+export type ProjectHealthOverviewItem = Awaited<
+  ReturnType<typeof getProjectHealthOverviewQuery>
+>[number];
+export type UrgentProjectOverviewItem = Awaited<
+  ReturnType<typeof getUrgentProjectOverviewQuery>
+>[number];
 
 export async function getProjectsQuery(filters: ProjectFilters = {}) {
   const where = buildProjectWhere(filters);
@@ -168,6 +175,52 @@ export async function getProjectMetrics() {
     designStage: designStageProjects[0]?.value ?? 0,
     contentReady: contentReadyProjects[0]?.value ?? 0,
   };
+}
+
+export async function getProjectHealthOverviewQuery(limit = 5) {
+  return db.query.projects.findMany({
+    where: inArray(schema.projects.status, activeProjectStatuses),
+    columns: {
+      id: true,
+      projectName: true,
+      status: true,
+      healthStatus: true,
+      priority: true,
+      progressPercentage: true,
+      deadline: true,
+      updatedAt: true,
+    },
+    orderBy: [
+      desc(schema.projects.updatedAt),
+      desc(schema.projects.createdAt),
+    ],
+    limit,
+  });
+}
+
+export async function getUrgentProjectOverviewQuery(limit = 5) {
+  return db.query.projects.findMany({
+    where: inArray(schema.projects.healthStatus, [
+      "urgent",
+      "blocked",
+      "delayed",
+    ] satisfies ProjectHealthStatus[]),
+    columns: {
+      id: true,
+      projectName: true,
+      status: true,
+      healthStatus: true,
+      priority: true,
+      progressPercentage: true,
+      deadline: true,
+      updatedAt: true,
+    },
+    orderBy: [
+      desc(schema.projects.updatedAt),
+      desc(schema.projects.createdAt),
+    ],
+    limit,
+  });
 }
 
 export async function getProjectFormOptions() {

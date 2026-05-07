@@ -94,11 +94,23 @@ export const designTaskFiltersSchema = z.object({
   ),
 });
 
+export const designStatusUpdateSchema = z.object({
+  status: z.enum(DESIGN_TASK_STATUSES),
+});
+
+export const designApprovalUpdateSchema = z.object({
+  approvalStatus: z.enum(DESIGN_APPROVAL_STATUSES),
+});
+
 export type UploadedDesignMediaInput = z.infer<
   typeof uploadedDesignMediaSchema
 >;
 export type DesignTaskMutationInput = z.infer<typeof designTaskMutationSchema>;
 export type DesignTaskFilters = z.infer<typeof designTaskFiltersSchema>;
+export type DesignStatusUpdateInput = z.infer<typeof designStatusUpdateSchema>;
+export type DesignApprovalUpdateInput = z.infer<
+  typeof designApprovalUpdateSchema
+>;
 
 export type DesignTaskActionState = FormActionState;
 

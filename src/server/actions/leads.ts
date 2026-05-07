@@ -1,6 +1,8 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -14,7 +16,6 @@ import {
   parseLeadConvertFormData,
   parseLeadFormData,
   type LeadActionState,
-  type LeadConvertInput,
   type LeadMutationInput,
 } from "@/src/features/leads/schemas";
 import {
@@ -232,37 +233,82 @@ export async function convertLeadToProjectAction(
     };
   }
 
-  const [project] = await db
-    .insert(schema.projects)
-    .values(toConvertedProjectValues(lead, parsed.data))
-    .returning({ id: schema.projects.id });
+  const projectId = randomUUID();
+  const convertedRows = await db.execute<{
+    projectId: string;
+    leadId: string;
+  }>(sql`
+    with updated_lead as (
+      update ${schema.leads}
+      set
+        ${schema.leads.status} = 'converted',
+        ${schema.leads.convertedProjectId} = ${projectId}::uuid,
+        ${schema.leads.updatedAt} = now()
+      where ${schema.leads.id} = ${lead.id}
+        and ${schema.leads.status} <> 'converted'
+        and ${schema.leads.convertedProjectId} is null
+      returning ${schema.leads.id}
+    ),
+    inserted_project as (
+      insert into ${schema.projects} (
+        ${schema.projects.id},
+        ${schema.projects.projectName},
+        ${schema.projects.clientName},
+        ${schema.projects.clientPhone},
+        ${schema.projects.location},
+        ${schema.projects.projectType},
+        ${schema.projects.roomArea},
+        ${schema.projects.description},
+        ${schema.projects.status},
+        ${schema.projects.healthStatus},
+        ${schema.projects.priority},
+        ${schema.projects.progressPercentage},
+        ${schema.projects.pmId},
+        ${schema.projects.designerId},
+        ${schema.projects.estimatedValue},
+        ${schema.projects.budgetWarningStatus},
+        ${schema.projects.contentReadyStatus}
+      )
+      select
+        ${projectId}::uuid,
+        ${parsed.data.projectName},
+        ${lead.leadName},
+        ${lead.phone},
+        ${parsed.data.location ?? null},
+        ${parsed.data.projectType ?? null},
+        ${parsed.data.roomArea ?? null},
+        coalesce(${parsed.data.description ?? null}, ${lead.notes}),
+        'lead_converted',
+        'healthy',
+        'medium',
+        0,
+        ${parsed.data.pmId ?? null}::uuid,
+        ${parsed.data.designerId ?? null}::uuid,
+        ${lead.estimatedProjectValue},
+        'none',
+        'not_ready'
+      from updated_lead
+      returning ${schema.projects.id}
+    )
+    select
+      inserted_project.id as "projectId",
+      updated_lead.id as "leadId"
+    from inserted_project
+    join updated_lead on true
+  `);
 
-  if (!project) {
-    return {
-      status: "error",
-      message: "Project could not be created from this lead.",
-    };
-  }
-
-  const [convertedLead] = await db
-    .update(schema.leads)
-    .set({
-      status: "converted",
-      convertedProjectId: project.id,
-    })
-    .where(and(eq(schema.leads.id, lead.id), eq(schema.leads.status, lead.status)))
-    .returning({ id: schema.leads.id });
+  const convertedLead = convertedRows.rows[0];
 
   if (!convertedLead) {
     return {
       status: "error",
       message:
-        "Project was created, but the lead could not be linked. Refresh before retrying.",
+        "Lead could not be converted. Refresh before retrying.",
     };
   }
 
-  revalidateLeadPaths(project.id);
-  revalidatePath(`/projects/${project.id}`);
+  revalidateLeadPaths(convertedLead.projectId);
+  revalidatePath(`/projects/${convertedLead.projectId}`);
 
   return {
     status: "success",
@@ -286,30 +332,6 @@ function toLeadValues(data: LeadMutationInput, currentUser: CurrentUser) {
     nextFollowUpDate: data.nextFollowUpDate ?? null,
     notes: data.notes ?? null,
   } satisfies typeof schema.leads.$inferInsert;
-}
-
-function toConvertedProjectValues(
-  lead: typeof schema.leads.$inferSelect,
-  data: LeadConvertInput,
-) {
-  return {
-    projectName: data.projectName,
-    clientName: lead.leadName,
-    clientPhone: lead.phone,
-    location: data.location ?? null,
-    projectType: data.projectType ?? null,
-    roomArea: data.roomArea ?? null,
-    description: data.description ?? lead.notes,
-    status: "lead_converted",
-    healthStatus: "healthy",
-    priority: "medium",
-    progressPercentage: 0,
-    pmId: data.pmId ?? null,
-    designerId: data.designerId ?? null,
-    estimatedValue: lead.estimatedProjectValue,
-    budgetWarningStatus: "none",
-    contentReadyStatus: "not_ready",
-  } satisfies typeof schema.projects.$inferInsert;
 }
 
 function buildLeadMutationWhere(leadId: string, currentUser: CurrentUser) {

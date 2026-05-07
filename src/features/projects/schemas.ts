@@ -105,8 +105,25 @@ export const projectFiltersSchema = z.object({
   priority: z.preprocess(emptyToUndefined, z.enum(PROJECT_PRIORITIES).optional()),
 });
 
+export const projectStatusUpdateSchema = z.object({
+  status: z.enum(PROJECT_STATUSES),
+});
+
+export const projectHealthUpdateSchema = z.object({
+  healthStatus: z.enum(PROJECT_HEALTH_STATUSES),
+});
+
+export const projectProgressUpdateSchema = z.object({
+  progressPercentage,
+});
+
 export type ProjectMutationInput = z.infer<typeof projectMutationSchema>;
 export type ProjectFilters = z.infer<typeof projectFiltersSchema>;
+export type ProjectStatusUpdateInput = z.infer<typeof projectStatusUpdateSchema>;
+export type ProjectHealthUpdateInput = z.infer<typeof projectHealthUpdateSchema>;
+export type ProjectProgressUpdateInput = z.infer<
+  typeof projectProgressUpdateSchema
+>;
 
 export type ProjectActionState = FormActionState;
 

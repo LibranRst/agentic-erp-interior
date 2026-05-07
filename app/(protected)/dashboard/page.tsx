@@ -1,4 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ChartUpIcon,
   Folder01Icon,
@@ -49,41 +48,24 @@ import {
   getPendingDesignTasksQuery,
 } from "@/src/features/design/queries"
 import { getMaterialIssueMetrics } from "@/src/features/materials/queries"
-import { getProjectMetrics } from "@/src/features/projects/queries"
+import {
+  getProjectHealthOverviewQuery,
+  getProjectMetrics,
+  getUrgentProjectOverviewQuery,
+  type ProjectHealthOverviewItem,
+} from "@/src/features/projects/queries"
+import {
+  projectHealthBadgeVariants,
+  projectHealthLabels,
+  projectStatusLabels,
+} from "@/src/features/projects/constants"
 import { formatDate } from "@/src/features/projects/utils"
 import { getLatestDailyUpdates } from "@/src/server/actions/daily-updates"
-import {
-  getDashboardLeads,
-  getSalesSnapshot,
-} from "@/src/server/actions/leads"
+import { getDashboardLeads, getSalesSnapshot } from "@/src/server/actions/leads"
 import { getLatestAiSummary } from "@/src/server/actions/ai-summary"
 import { getContentReadyProjects } from "@/src/server/actions/content"
 import { getMaterialIssues } from "@/src/server/actions/materials"
 import { requirePageUser } from "@/src/lib/auth/permissions"
-
-const projectRows = [
-  ["Kebayoran Residence", "Build", "At risk", "Material ETA pending"],
-  ["Pondok Indah Apartment", "Design", "Healthy", "DED review tomorrow"],
-  ["BSD Show Unit", "Finishing", "Watch", "PM update needed"],
-]
-
-const snapshotCards = [
-  {
-    title: "Design Status Snapshot",
-    description: "2 approvals waiting",
-    icon: PaintBoardIcon,
-  },
-  {
-    title: "Material Warning Snapshot",
-    description: "5 tracked issues",
-    icon: PackageIcon,
-  },
-  {
-    title: "Sales Snapshot",
-    description: "11 new leads this week",
-    icon: ShoppingBag03Icon,
-  },
-]
 
 export default async function DashboardPage() {
   const currentUser = await requirePageUser()
@@ -92,6 +74,8 @@ export default async function DashboardPage() {
     designMetrics,
     materialMetrics,
     salesMetrics,
+    projectHealthOverview,
+    urgentProjects,
     pendingDesignTasks,
     latestDailyUpdates,
     materialIssues,
@@ -103,6 +87,8 @@ export default async function DashboardPage() {
     getDesignTaskMetrics(),
     getMaterialIssueMetrics(),
     getSalesSnapshot(),
+    getProjectHealthOverviewQuery(5),
+    getUrgentProjectOverviewQuery(4),
     getPendingDesignTasksQuery(4),
     getLatestDailyUpdates(4),
     getMaterialIssues(4),
@@ -161,25 +147,6 @@ export default async function DashboardPage() {
     },
   ]
 
-  const dashboardSnapshotCards = snapshotCards.map((card) =>
-    card.title === "Design Status Snapshot"
-      ? {
-          ...card,
-          description: `${designMetrics.waitingApproval} approvals waiting, ${designMetrics.dedProgress} DED in progress`,
-        }
-      : card.title === "Material Warning Snapshot"
-        ? {
-            ...card,
-            description: `${materialMetrics.delayed} delayed, ${materialMetrics.high + materialMetrics.critical} high or critical`,
-          }
-      : card.title === "Sales Snapshot"
-        ? {
-            ...card,
-            description: `${salesMetrics.new} new, ${salesMetrics.hot} hot, ${salesMetrics.followUp} follow-up due`,
-          }
-      : card,
-  )
-
   return (
     <PageContainer>
       <PageHeader
@@ -196,8 +163,8 @@ export default async function DashboardPage() {
           <MetricCard key={metric.title} {...metric} />
         ))}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-        <div className="flex flex-col gap-4">
+      <div className="grid gap-4 xl:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>AI Morning Summary</CardTitle>
@@ -208,7 +175,7 @@ export default async function DashboardPage() {
             <CardContent className="flex flex-col gap-4">
               {latestAiSummary ? (
                 <>
-                  <p className="whitespace-pre-wrap text-sm leading-6">
+                  <p className="text-sm leading-6 whitespace-pre-wrap">
                     {latestAiSummary.content}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -238,7 +205,7 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Project Health Overview</CardTitle>
               <CardDescription>
-                Fast scan of active delivery risk.
+                Active projects from the live project tracker.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -253,27 +220,99 @@ export default async function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {projectRows.map(([project, stage, health, action]) => (
-                      <TableRow key={project}>
-                        <TableCell className="font-medium">{project}</TableCell>
-                        <TableCell>{stage}</TableCell>
+                    {projectHealthOverview.map((project) => (
+                      <TableRow key={project.id}>
+                        <TableCell className="max-w-64 truncate font-medium">
+                          {project.projectName}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={health === "At risk" ? "destructive" : "secondary"}>
-                            {health}
+                          {projectStatusLabels[project.status]}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              projectHealthBadgeVariants[project.healthStatus]
+                            }
+                          >
+                            {projectHealthLabels[project.healthStatus]}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {action}
+                        <TableCell className="min-w-52 whitespace-normal text-muted-foreground">
+                          {getProjectNextAction(project)}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                {projectHealthOverview.length === 0 ? (
+                  <RecordEmptyState
+                    title="No active projects"
+                    description="Active project risk will appear here once projects are created."
+                    className="border-0 p-8"
+                  />
+                ) : null}
               </DataTableShell>
             </CardContent>
           </Card>
         </div>
-        <div className="grid gap-4">
+        <div className="grid min-w-0 gap-4 xl:col-span-1">
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Urgent Projects</CardTitle>
+              <CardDescription>
+                {urgentProjects.length} blocked, delayed, or urgent projects
+                requiring attention.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {urgentProjects.length > 0 ? (
+                urgentProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="min-w-0 overflow-hidden rounded-lg border p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {project.projectName}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {projectStatusLabels[project.status]} · Deadline{" "}
+                          {formatDate(project.deadline)}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          projectHealthBadgeVariants[project.healthStatus]
+                        }
+                      >
+                        {projectHealthLabels[project.healthStatus]}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">
+                        {project.progressPercentage}% progress
+                      </Badge>
+                    </div>
+                    <div className="mt-2 min-w-0 rounded-md bg-muted/40 px-3 py-2 text-sm leading-5 text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        Next action:
+                      </span>{" "}
+                      <span className="break-words">
+                        {getProjectNextAction(project)}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <RecordEmptyState
+                  title="No urgent projects"
+                  description="Blocked, delayed, and urgent projects will appear here."
+                  className="p-6"
+                />
+              )}
+            </CardContent>
+          </Card>
           <Card size="sm">
             <CardHeader>
               <CardTitle>Latest PM Updates</CardTitle>
@@ -284,26 +323,30 @@ export default async function DashboardPage() {
             <CardContent className="flex flex-col gap-3">
               {latestDailyUpdates.length > 0 ? (
                 latestDailyUpdates.map((update) => (
-                  <div key={update.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <div
+                    key={update.id}
+                    className="min-w-0 overflow-hidden rounded-lg border p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">
                           {update.project.projectName}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {update.updater?.name ?? "Unknown PM"} · {formatDate(update.updateDate)}
+                          {update.updater?.name ?? "Unknown PM"} ·{" "}
+                          {formatDate(update.updateDate)}
                         </div>
                       </div>
                       <DailyUpdateHealthBadge
                         healthStatus={update.healthStatus}
                       />
                     </div>
-                    <div className="line-clamp-2 text-sm text-muted-foreground">
+                    <div className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                       {update.nextAction ??
                         update.issueNotes ??
                         update.progressSummary}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge variant="outline">
                         {update.progressPercentage !== null
                           ? `${update.progressPercentage}%`
@@ -328,27 +371,34 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Design Status Snapshot</CardTitle>
               <CardDescription>
-                Pending design, render, revision, and DED work.
+                {designMetrics.waitingApproval} approvals waiting,{" "}
+                {designMetrics.dedProgress} DED in progress.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {pendingDesignTasks.length > 0 ? (
                 pendingDesignTasks.map((task) => (
-                  <div key={task.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <div
+                    key={task.id}
+                    className="min-w-0 overflow-hidden rounded-lg border p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">
                           {task.taskName}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {task.project.projectName} · {task.designer?.name ?? "Unassigned"}
+                          {task.project.projectName} ·{" "}
+                          {task.designer?.name ?? "Unassigned"}
                         </div>
                       </div>
                       <DesignTaskStatusBadge status={task.status} />
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <DesignTypeBadge designType={task.designType} />
-                      <Badge variant="outline">{formatDate(task.dueDate)}</Badge>
+                      <Badge variant="outline">
+                        {formatDate(task.dueDate)}
+                      </Badge>
                     </div>
                   </div>
                 ))
@@ -365,32 +415,40 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Material Warning Snapshot</CardTitle>
               <CardDescription>
-                Delayed, high, and critical purchasing issues.
+                {materialMetrics.delayed} delayed,{" "}
+                {materialMetrics.high + materialMetrics.critical} high or
+                critical issues.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {materialIssues.length > 0 ? (
                 materialIssues.map((material) => (
-                  <div key={material.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <div
+                    key={material.id}
+                    className="min-w-0 overflow-hidden rounded-lg border p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">
                           {material.materialName}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {material.project.projectName} · {material.vendor?.vendorName ?? "Vendor unassigned"}
+                          {material.project.projectName} ·{" "}
+                          {material.vendor?.vendorName ?? "Vendor unassigned"}
                         </div>
                       </div>
                       <MaterialUrgencyBadge
                         urgencyLevel={material.urgencyLevel}
                       />
                     </div>
-                    <div className="line-clamp-2 text-sm text-muted-foreground">
+                    <div className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                       {material.issueNotes ?? "No issue notes recorded yet."}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <MaterialStatusBadge status={material.status} />
-                      <Badge variant="outline">ETA {formatDate(material.etaDate)}</Badge>
+                      <Badge variant="outline">
+                        ETA {formatDate(material.etaDate)}
+                      </Badge>
                     </div>
                   </div>
                 ))
@@ -407,28 +465,34 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Content Readiness</CardTitle>
               <CardDescription>
-                Projects with shoot, footage, or publishing opportunities.
+                {contentReadyProjects.length} projects with shoot, footage, or
+                publishing opportunities.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {contentReadyProjects.length > 0 ? (
                 contentReadyProjects.map((asset) => (
-                  <div key={asset.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <div
+                    key={asset.id}
+                    className="min-w-0 overflow-hidden rounded-lg border p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">
                           {asset.project.projectName}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {asset.roomArea ?? "General"} · {asset.project.clientName}
+                          {asset.roomArea ?? "General"} ·{" "}
+                          {asset.project.clientName}
                         </div>
                       </div>
                       <ContentStatusBadge status={asset.contentStatus} />
                     </div>
-                    <div className="line-clamp-2 text-sm text-muted-foreground">
-                      {asset.suggestedAngle ?? "No suggested angle recorded yet."}
+                    <div className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                      {asset.suggestedAngle ??
+                        "No suggested angle recorded yet."}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <ContentOpportunityBadge
                         opportunity={asset.contentOpportunity}
                       />
@@ -447,51 +511,39 @@ export default async function DashboardPage() {
               )}
             </CardContent>
           </Card>
-          {dashboardSnapshotCards
-            .filter(
-              (card) =>
-                card.title !== "Design Status Snapshot" &&
-                card.title !== "Material Warning Snapshot" &&
-                card.title !== "Sales Snapshot",
-            )
-            .map(({ title, description, icon }) => (
-              <Card key={title} size="sm">
-                <CardHeader>
-                  <CardTitle>{title}</CardTitle>
-                  <CardDescription>{description}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                  <span>Open module for details</span>
-                  <HugeiconsIcon icon={icon} strokeWidth={2} />
-                </CardContent>
-              </Card>
-            ))}
           <Card size="sm">
             <CardHeader>
               <CardTitle>Sales Snapshot</CardTitle>
               <CardDescription>
-                New, hot, and follow-up leads requiring sales attention.
+                {salesMetrics.new} new, {salesMetrics.hot} hot,{" "}
+                {salesMetrics.followUp} follow-up due.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {dashboardLeads.length > 0 ? (
                 dashboardLeads.map((lead) => (
-                  <div key={lead.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <div
+                    key={lead.id}
+                    className="min-w-0 overflow-hidden rounded-lg border p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">
                           {lead.leadName}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {lead.assignedSales?.name ?? "Unassigned"} · {lead.source ?? "Source not set"}
+                          {lead.assignedSales?.name ?? "Unassigned"} ·{" "}
+                          {lead.source ?? "Source not set"}
                         </div>
                       </div>
                       <LeadStatusBadge status={lead.status} />
                     </div>
-                    <div className="line-clamp-2 text-sm text-muted-foreground">
-                      {lead.interest ?? lead.notes ?? "No interest recorded yet."}
+                    <div className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                      {lead.interest ??
+                        lead.notes ??
+                        "No interest recorded yet."}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge variant="outline">
                         Follow-up {formatDate(lead.nextFollowUpDate)}
                       </Badge>
@@ -526,4 +578,28 @@ function formatGeneratedAt(value: Date) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(value)
+}
+
+function getProjectNextAction(project: ProjectHealthOverviewItem) {
+  if (project.healthStatus === "blocked") {
+    return "Resolve blocker before progress can continue"
+  }
+
+  if (project.healthStatus === "urgent") {
+    return "Owner attention needed today"
+  }
+
+  if (project.healthStatus === "delayed") {
+    return "Review delay reason and recovery plan"
+  }
+
+  if (project.priority === "critical" || project.priority === "high") {
+    return "Monitor high-priority delivery closely"
+  }
+
+  if (project.deadline) {
+    return `Deadline ${formatDate(project.deadline)}`
+  }
+
+  return `${project.progressPercentage}% progress recorded`
 }

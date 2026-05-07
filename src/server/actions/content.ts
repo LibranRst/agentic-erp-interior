@@ -10,6 +10,7 @@ import {
 } from "@/src/features/content/queries";
 import {
   contentAssetFiltersSchema,
+  contentStatusUpdateSchema,
   parseContentAssetFormData,
   type ContentAssetActionState,
   type ContentAssetMutationInput,
@@ -63,6 +64,12 @@ export async function createContentAssetAction(
       message: getZodMessage(parsed.error),
       fieldErrors: getZodFieldErrors(parsed.error),
     };
+  }
+
+  const projectCheck = await validateContentProject(parsed.data.projectId);
+
+  if (projectCheck) {
+    return projectCheck;
   }
 
   const [asset] = await db
@@ -138,6 +145,12 @@ export async function updateContentAssetAction(
     };
   }
 
+  const projectCheck = await validateContentProject(parsed.data.projectId);
+
+  if (projectCheck) {
+    return projectCheck;
+  }
+
   const [asset] = await db
     .update(schema.contentAssets)
     .set(toContentAssetValues(parsed.data, currentUser.id))
@@ -180,6 +193,54 @@ export async function updateContentAssetAction(
   };
 }
 
+export async function updateContentStatusAction(
+  contentAssetId: string,
+  input: unknown,
+): Promise<ContentAssetActionState> {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "content_asset:update");
+  requireRole(currentUser, ["owner", "admin", "marketing"]);
+
+  const parsedAssetId = contentAssetIdSchema.safeParse(contentAssetId);
+  const parsed = contentStatusUpdateSchema.safeParse(input);
+
+  if (!parsedAssetId.success || !parsed.success) {
+    return {
+      status: "error",
+      message:
+        getFirstZodMessage(parsedAssetId, parsed) ??
+        "Content status is invalid.",
+    };
+  }
+
+  const [asset] = await db
+    .update(schema.contentAssets)
+    .set({
+      contentStatus: parsed.data.contentStatus,
+      assignedTo: currentUser.id,
+    })
+    .where(eq(schema.contentAssets.id, parsedAssetId.data))
+    .returning({
+      id: schema.contentAssets.id,
+      projectId: schema.contentAssets.projectId,
+    });
+
+  if (!asset) {
+    return {
+      status: "error",
+      message: "Content asset was not found.",
+    };
+  }
+
+  await syncProjectContentReadyStatus(asset.projectId);
+  revalidateContentPaths(asset.projectId);
+
+  return {
+    status: "success",
+    message: "Content asset updated.",
+  };
+}
+
 function toContentAssetValues(
   data: ContentAssetMutationInput,
   assignedTo: string,
@@ -196,6 +257,26 @@ function toContentAssetValues(
     publishUrl: data.publishUrl ?? null,
     notes: data.notes ?? null,
   } satisfies typeof schema.contentAssets.$inferInsert;
+}
+
+async function validateContentProject(
+  projectId: string,
+): Promise<ContentAssetActionState | null> {
+  const project = await db.query.projects.findFirst({
+    where: eq(schema.projects.id, projectId),
+    columns: {
+      id: true,
+    },
+  });
+
+  if (!project) {
+    return {
+      status: "error",
+      message: "Project was not found.",
+    };
+  }
+
+  return null;
 }
 
 async function createContentMediaAssets({
@@ -255,4 +336,17 @@ function revalidateContentPaths(projectId: string) {
 
 function getZodMessage(error: z.ZodError) {
   return error.issues[0]?.message ?? "Content asset data is invalid.";
+}
+
+type SafeParseFailure = { success: false; error: z.ZodError };
+type SafeParseResult = { success: true } | SafeParseFailure;
+
+function getFirstZodMessage(...results: SafeParseResult[]) {
+  for (const result of results) {
+    if (!result.success) {
+      return result.error.issues[0]?.message;
+    }
+  }
+
+  return undefined;
 }

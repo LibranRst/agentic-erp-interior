@@ -80,6 +80,10 @@ export const contentAssetFiltersSchema = z.object({
   ),
 });
 
+export const contentStatusUpdateSchema = z.object({
+  contentStatus: z.enum(CONTENT_STATUSES),
+});
+
 export type UploadedContentMediaInput = z.infer<
   typeof uploadedContentMediaSchema
 >;
@@ -87,6 +91,9 @@ export type ContentAssetMutationInput = z.infer<
   typeof contentAssetMutationSchema
 >;
 export type ContentAssetFilters = z.infer<typeof contentAssetFiltersSchema>;
+export type ContentStatusUpdateInput = z.infer<
+  typeof contentStatusUpdateSchema
+>;
 
 export type ContentAssetActionState = FormActionState;
 

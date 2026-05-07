@@ -26,6 +26,15 @@ const optionalText = (maxLength: number) =>
     z.string().trim().max(maxLength).optional(),
   );
 
+const optionalEmail = z.preprocess(
+  emptyToUndefined,
+  z
+    .email("Enter a valid email address.")
+    .max(160, "Email is too long.")
+    .transform((value) => value.toLowerCase())
+    .optional(),
+);
+
 const optionalDate = z.preprocess(
   emptyToUndefined,
   z
@@ -54,7 +63,7 @@ export const leadMutationSchema = z.object({
     .min(2, "Lead name must be at least 2 characters.")
     .max(120, "Lead name is too long."),
   phone: optionalText(40),
-  email: optionalText(160),
+  email: optionalEmail,
   source: optionalText(120),
   interest: optionalText(240),
   estimatedProjectValue: optionalEstimatedValue,

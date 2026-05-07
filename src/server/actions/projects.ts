@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -12,6 +12,9 @@ import {
 import {
   parseProjectFormData,
   projectFiltersSchema,
+  projectHealthUpdateSchema,
+  projectProgressUpdateSchema,
+  projectStatusUpdateSchema,
   type ProjectActionState,
   type ProjectMutationInput,
 } from "@/src/features/projects/schemas";
@@ -128,6 +131,81 @@ export async function updateProjectAction(
   };
 }
 
+export async function updateProjectStatusAction(
+  projectId: string,
+  input: unknown,
+) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "project:update");
+  requireRole(currentUser, ["owner", "admin", "project_manager"]);
+
+  const parsedProjectId = projectIdSchema.safeParse(projectId);
+  const parsed = projectStatusUpdateSchema.safeParse(input);
+
+  if (!parsedProjectId.success || !parsed.success) {
+    return {
+      status: "error",
+      message:
+        getFirstZodMessage(parsedProjectId, parsed) ??
+        "Project status data is invalid.",
+    } satisfies ProjectActionState;
+  }
+
+  return updateLimitedProjectFields(parsedProjectId.data, currentUser, {
+    status: parsed.data.status,
+  });
+}
+
+export async function updateProjectHealthAction(
+  projectId: string,
+  input: unknown,
+) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "project:update");
+  requireRole(currentUser, ["owner", "admin", "project_manager"]);
+
+  const parsedProjectId = projectIdSchema.safeParse(projectId);
+  const parsed = projectHealthUpdateSchema.safeParse(input);
+
+  if (!parsedProjectId.success || !parsed.success) {
+    return {
+      status: "error",
+      message:
+        getFirstZodMessage(parsedProjectId, parsed) ??
+        "Project health data is invalid.",
+    } satisfies ProjectActionState;
+  }
+
+  return updateLimitedProjectFields(parsedProjectId.data, currentUser, {
+    healthStatus: parsed.data.healthStatus,
+  });
+}
+
+export async function updateProjectProgressAction(
+  projectId: string,
+  input: unknown,
+) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "project:update");
+  requireRole(currentUser, ["owner", "admin", "project_manager"]);
+
+  const parsedProjectId = projectIdSchema.safeParse(projectId);
+  const parsed = projectProgressUpdateSchema.safeParse(input);
+
+  if (!parsedProjectId.success || !parsed.success) {
+    return {
+      status: "error",
+      message:
+        getFirstZodMessage(parsedProjectId, parsed) ??
+        "Project progress data is invalid.",
+    } satisfies ProjectActionState;
+  }
+
+  return updateLimitedProjectFields(parsedProjectId.data, currentUser, {
+    progressPercentage: parsed.data.progressPercentage,
+  });
+}
+
 function toProjectValues(data: ProjectMutationInput) {
   return {
     projectName: data.projectName,
@@ -152,6 +230,56 @@ function toProjectValues(data: ProjectMutationInput) {
   } satisfies typeof schema.projects.$inferInsert;
 }
 
+async function updateLimitedProjectFields(
+  projectId: string,
+  currentUser: Awaited<ReturnType<typeof requireUser>>,
+  values: Partial<
+    Pick<
+      typeof schema.projects.$inferInsert,
+      "status" | "healthStatus" | "progressPercentage"
+    >
+  >,
+): Promise<ProjectActionState> {
+  const where =
+    currentUser.role === "project_manager"
+      ? and(eq(schema.projects.id, projectId), eq(schema.projects.pmId, currentUser.id))
+      : eq(schema.projects.id, projectId);
+
+  const [project] = await db
+    .update(schema.projects)
+    .set(values)
+    .where(where)
+    .returning({ id: schema.projects.id });
+
+  if (!project) {
+    return {
+      status: "error",
+      message: "Project was not found or is not assigned to you.",
+    };
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${project.id}`);
+
+  return {
+    status: "success",
+    message: "Project updated.",
+  };
+}
+
 function getZodMessage(error: z.ZodError) {
   return error.issues[0]?.message ?? "Project data is invalid.";
+}
+
+function getFirstZodMessage(
+  ...results: Array<ReturnType<typeof z.ZodType.prototype.safeParse>>
+) {
+  for (const result of results) {
+    if (!result.success) {
+      return result.error.issues[0]?.message;
+    }
+  }
+
+  return undefined;
 }
