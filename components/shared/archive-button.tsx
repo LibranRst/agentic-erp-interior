@@ -8,7 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 
 type ArchiveButtonProps = {
-  action: () => Promise<{ status: string; message: string }>;
+  action: () => Promise<unknown>;
   label?: string;
 };
 

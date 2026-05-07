@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, ilike, isNotNull, isNull, or, type SQL } from "drizzle-orm";
 
 import { db, schema } from "@/src/lib/db";
 
@@ -6,9 +6,17 @@ import type { VendorFilters } from "./schemas";
 
 export type VendorListItem = Awaited<ReturnType<typeof getVendorsQuery>>[number];
 
-export async function getVendorsQuery(filters: VendorFilters = {}) {
+export async function getVendorsQuery(
+  filters: VendorFilters = {},
+  includeArchived = false,
+) {
   return db.query.vendors.findMany({
-    where: buildVendorWhere(filters),
+    where: and(
+      buildVendorWhere(filters),
+      includeArchived
+        ? isNotNull(schema.vendors.archivedAt)
+        : isNull(schema.vendors.archivedAt),
+    ),
     orderBy: [asc(schema.vendors.vendorName)],
   });
 }

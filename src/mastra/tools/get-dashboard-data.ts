@@ -17,7 +17,8 @@ import { getDesignBottlenecks } from "./get-design-bottlenecks";
 import { getMaterialIssues } from "./get-material-issues";
 import { getProjectRiskData } from "./get-project-risk-data";
 import { getSalesSnapshot } from "./get-sales-snapshot";
-import { boundedLimitSchema, erpDataBundleSchema } from "./schemas";
+import { requireOwnerAdminAiToolUser } from "./auth";
+import { authorizedToolInputSchema, erpDataBundleSchema } from "./schemas";
 import {
   clampLimit,
   countValue,
@@ -29,7 +30,7 @@ export const getDashboardDataTool = createTool({
   id: "get-dashboard-data",
   description:
     "Fetch a safe, sanitized ERP data bundle for Dekoria owner operational summaries.",
-  inputSchema: boundedLimitSchema,
+  inputSchema: authorizedToolInputSchema,
   outputSchema: erpDataBundleSchema,
   mcp: {
     annotations: READ_ONLY_TOOL_ANNOTATIONS,
@@ -37,9 +38,18 @@ export const getDashboardDataTool = createTool({
   execute: async (input) => getDashboardData(input),
 });
 
-export async function getDashboardData(input: { limit?: number } = {}) {
+export async function getDashboardData(input: {
+  limit?: number;
+  requesterUserId: string;
+}) {
+  await requireOwnerAdminAiToolUser(input.requesterUserId);
+
   const limit = clampLimit(input.limit);
   const today = getJakartaDate();
+  const toolInput = {
+    limit,
+    requesterUserId: input.requesterUserId,
+  };
 
   const [
     activeProjects,
@@ -105,12 +115,12 @@ export async function getDashboardData(input: { limit?: number } = {}) {
           ...CONTENT_READY_DASHBOARD_STATUSES,
         ]),
       ),
-    getProjectRiskData({ limit }),
-    getLatestDailyUpdates({ limit }),
-    getDesignBottlenecks({ limit }),
-    getMaterialIssues({ limit }),
-    getSalesSnapshot({ limit }),
-    getContentOpportunities({ limit }),
+    getProjectRiskData(toolInput),
+    getLatestDailyUpdates(toolInput),
+    getDesignBottlenecks(toolInput),
+    getMaterialIssues(toolInput),
+    getSalesSnapshot(toolInput),
+    getContentOpportunities(toolInput),
   ]);
 
   const metrics = {

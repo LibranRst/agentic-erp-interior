@@ -4,14 +4,15 @@ import { desc, inArray } from "drizzle-orm";
 import { CONTENT_READY_DASHBOARD_STATUSES } from "@/src/features/content/constants";
 import { db, schema } from "@/src/lib/db";
 
-import { boundedLimitSchema, contentOpportunitySchema } from "./schemas";
+import { requireOwnerAdminAiToolUser } from "./auth";
+import { authorizedToolInputSchema, contentOpportunitySchema } from "./schemas";
 import { clampLimit, READ_ONLY_TOOL_ANNOTATIONS } from "./utils";
 
 export const getContentOpportunitiesTool = createTool({
   id: "get-content-opportunities",
   description:
     "Fetch content-ready project assets and content opportunities through safe Drizzle queries.",
-  inputSchema: boundedLimitSchema,
+  inputSchema: authorizedToolInputSchema,
   outputSchema: contentOpportunitySchema.array(),
   mcp: {
     annotations: READ_ONLY_TOOL_ANNOTATIONS,
@@ -19,7 +20,12 @@ export const getContentOpportunitiesTool = createTool({
   execute: async (input) => getContentOpportunities(input),
 });
 
-export async function getContentOpportunities(input: { limit?: number } = {}) {
+export async function getContentOpportunities(input: {
+  limit?: number;
+  requesterUserId: string;
+}) {
+  await requireOwnerAdminAiToolUser(input.requesterUserId);
+
   const limit = clampLimit(input.limit);
 
   const assets = await db.query.contentAssets.findMany({

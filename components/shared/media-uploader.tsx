@@ -177,18 +177,19 @@ export function MediaUploader({
       <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="text-sm text-muted-foreground">{description}</div>
-          <Button type="button" variant="outline" disabled={isDisabled} asChild>
-            <label
-              htmlFor={isDisabled ? undefined : inputId}
-              className={isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
-            >
-              <HugeiconsIcon
-                icon={CloudUploadIcon}
-                strokeWidth={2}
-                data-icon="inline-start"
-              />
-              {isUploading ? "Uploading..." : buttonLabel}
-            </label>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isDisabled}
+            className="w-full sm:w-auto"
+            onClick={() => inputRef.current?.click()}
+          >
+            <HugeiconsIcon
+              icon={CloudUploadIcon}
+              strokeWidth={2}
+              data-icon="inline-start"
+            />
+            {isUploading ? "Uploading..." : buttonLabel}
           </Button>
         </div>
         {isContextMissing ? (

@@ -7,12 +7,14 @@ Purpose: prioritize the MVP gap fixes into small, safe batches that move Dekoria
 Source docs read:
 
 - `docs/MVP_GAP_REPORT.md`
-- `docs/MVP_ACCEPTENCE_CHECKLIST.md`
+- `docs/MVP_ACCEPTANCE_CHECKLIST.md`
 - `AGENTS.md`
 - `docs/PRD.md`
 - `docs/FLOWS.md`
 
-Note: `docs/MVP_ACCEPTANCE_CHECKLIST.md` was requested but does not exist. The current checklist file is misspelled as `docs/MVP_ACCEPTENCE_CHECKLIST.md`; Sprint A includes fixing this documentation issue.
+Sprint G status: Executed as final QA/documentation cleanup on 2026-05-07. Current beta status is "Ready for internal beta with limitations": static checks, Mastra build, migration, seed, authenticated browser role workflows, non-owner PM redirects, and ImageKit upload-auth passed; live AI generation is blocked by an invalid Gemini API key.
+
+Note: the canonical checklist path is now `docs/MVP_ACCEPTANCE_CHECKLIST.md`.
 
 ## Sprint A: App-Breaking Issues
 
@@ -22,7 +24,6 @@ Stabilize the MVP shell so all accepted routes are real, protected, recover grac
 
 Files likely affected:
 
-- `docs/MVP_ACCEPTENCE_CHECKLIST.md`
 - `docs/MVP_ACCEPTANCE_CHECKLIST.md`
 - `app/(protected)/media/page.tsx`
 - `app/(protected)/settings/page.tsx`
@@ -359,6 +360,12 @@ What must not be touched:
 Goal:
 
 Prove the MVP is ready for internal testing against the acceptance checklist and real role-based workflows.
+
+Sprint G execution note:
+
+- Sprint G is a QA/documentation sprint only.
+- It should not add new major features, redesign UI, or rewrite architecture.
+- As of the 2026-05-07 Sprint G pass, static verification and core authenticated browser QA are green enough for internal beta with documented limitations.
 
 Files likely affected:
 

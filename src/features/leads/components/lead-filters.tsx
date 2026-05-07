@@ -159,8 +159,8 @@ export function LeadFilters({
           options={selectOptions.followUp}
           onValueChange={(value) => updateSelect("followUp", value)}
         />
-        <div className="flex items-end gap-2 md:col-span-2 xl:col-span-5">
-          <Button type="submit" disabled={isPending}>
+        <div className="flex flex-col items-stretch gap-2 md:col-span-2 sm:flex-row sm:items-end xl:col-span-5">
+          <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
             <HugeiconsIcon
               icon={FilterHorizontalIcon}
               strokeWidth={2}
@@ -168,7 +168,12 @@ export function LeadFilters({
             />
             {isPending ? "Filtering..." : "Apply Filters"}
           </Button>
-          <Button type="button" variant="outline" onClick={resetFilters}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={resetFilters}
+            className="w-full sm:w-auto"
+          >
             Reset
           </Button>
         </div>

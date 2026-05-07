@@ -90,6 +90,10 @@ DATABASE_URL_UNPOOLED=
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
 
+# Bootstrap owner invite for local/internal beta setup
+BOOTSTRAP_OWNER_EMAIL=
+BOOTSTRAP_OWNER_NAME=Dekoria Owner
+
 # Optional Auth - Clerk
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
@@ -131,6 +135,14 @@ Generate a secure random string:
 openssl rand -base64 32
 ```
 
+### `BOOTSTRAP_OWNER_EMAIL`
+
+Optional but recommended for internal beta setup. When set, `bun run db:seed` creates a pending owner invite and prints the invite URL. Use that URL to create the first Better Auth owner credential.
+
+### `BOOTSTRAP_OWNER_NAME`
+
+Display name used for the bootstrap owner invite. Defaults to `Dekoria Owner`.
+
 ### `IMAGEKIT_PRIVATE_KEY`
 
 Server-only. Never expose this to client components.
@@ -150,6 +162,8 @@ DATABASE_URL_UNPOOLED=
 
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
+BOOTSTRAP_OWNER_EMAIL=
+BOOTSTRAP_OWNER_NAME=Dekoria Owner
 
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
@@ -180,6 +194,8 @@ INTERNAL_API_SECRET=
 8. Run Drizzle migration.
 9. Run seed script.
 10. Start local dev server with bun dev.
+11. If `BOOTSTRAP_OWNER_EMAIL` is set, open the printed invite URL and create the owner password.
+12. Log in at `/login` with the accepted owner invite account.
 ```
 
 ---
@@ -196,6 +212,8 @@ DATABASE_URL=
 DATABASE_URL_UNPOOLED=
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=
+BOOTSTRAP_OWNER_EMAIL=
+BOOTSTRAP_OWNER_NAME=
 IMAGEKIT_PUBLIC_KEY=
 IMAGEKIT_PRIVATE_KEY=
 IMAGEKIT_URL_ENDPOINT=
@@ -204,6 +222,8 @@ NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT=
 GOOGLE_GENERATIVE_AI_API_KEY=
 INTERNAL_API_SECRET=
 ```
+
+Production note: `BOOTSTRAP_OWNER_EMAIL` is only needed for initial setup or controlled bootstrap operations. Clear it after the intended owner invite has been created.
 
 If using Clerk instead of Better Auth:
 

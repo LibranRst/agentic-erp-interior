@@ -3,14 +3,15 @@ import { desc, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/src/lib/db";
 
-import { boundedLimitSchema, safeProjectSchema } from "./schemas";
+import { requireOwnerAdminAiToolUser } from "./auth";
+import { authorizedToolInputSchema, safeProjectSchema } from "./schemas";
 import { clampLimit, READ_ONLY_TOOL_ANNOTATIONS, toDateOnly, toIsoString } from "./utils";
 
 export const getProjectRiskDataTool = createTool({
   id: "get-project-risk-data",
   description:
     "Fetch urgent, blocked, delayed, or critical Dekoria project data through safe Drizzle queries.",
-  inputSchema: boundedLimitSchema,
+  inputSchema: authorizedToolInputSchema,
   outputSchema: safeProjectSchema.array(),
   mcp: {
     annotations: READ_ONLY_TOOL_ANNOTATIONS,
@@ -18,7 +19,12 @@ export const getProjectRiskDataTool = createTool({
   execute: async (input) => getProjectRiskData(input),
 });
 
-export async function getProjectRiskData(input: { limit?: number } = {}) {
+export async function getProjectRiskData(input: {
+  limit?: number;
+  requesterUserId: string;
+}) {
+  await requireOwnerAdminAiToolUser(input.requesterUserId);
+
   const limit = clampLimit(input.limit);
 
   const projects = await db.query.projects.findMany({

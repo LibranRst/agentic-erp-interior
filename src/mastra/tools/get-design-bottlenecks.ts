@@ -4,14 +4,15 @@ import { asc, desc, inArray } from "drizzle-orm";
 import { PENDING_DESIGN_TASK_STATUSES } from "@/src/features/design/constants";
 import { db, schema } from "@/src/lib/db";
 
-import { boundedLimitSchema, designBottleneckSchema } from "./schemas";
+import { requireOwnerAdminAiToolUser } from "./auth";
+import { authorizedToolInputSchema, designBottleneckSchema } from "./schemas";
 import { clampLimit, READ_ONLY_TOOL_ANNOTATIONS, toDateOnly } from "./utils";
 
 export const getDesignBottlenecksTool = createTool({
   id: "get-design-bottlenecks",
   description:
     "Fetch pending, blocked, or waiting design and DED tasks through safe Drizzle queries.",
-  inputSchema: boundedLimitSchema,
+  inputSchema: authorizedToolInputSchema,
   outputSchema: designBottleneckSchema.array(),
   mcp: {
     annotations: READ_ONLY_TOOL_ANNOTATIONS,
@@ -19,7 +20,12 @@ export const getDesignBottlenecksTool = createTool({
   execute: async (input) => getDesignBottlenecks(input),
 });
 
-export async function getDesignBottlenecks(input: { limit?: number } = {}) {
+export async function getDesignBottlenecks(input: {
+  limit?: number;
+  requesterUserId: string;
+}) {
+  await requireOwnerAdminAiToolUser(input.requesterUserId);
+
   const limit = clampLimit(input.limit);
 
   const tasks = await db.query.designTasks.findMany({

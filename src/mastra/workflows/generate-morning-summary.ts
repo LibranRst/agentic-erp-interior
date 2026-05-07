@@ -1,9 +1,6 @@
 import { createStep, createWorkflow } from "@mastra/core/workflows";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { db, schema } from "@/src/lib/db";
-import { ForbiddenError } from "@/src/lib/auth/permissions";
 import {
   GENERATE_MORNING_SUMMARY_WORKFLOW,
   type GeminiReasoningLevel,
@@ -12,6 +9,7 @@ import { generateOwnerMorningSummary } from "@/src/mastra/agents/owner-ops-agent
 import { completeAiRun, startAiRun } from "@/src/mastra/persistence/ai-runs";
 import { saveMorningSummary } from "@/src/mastra/persistence/ai-summaries";
 import { getDashboardData } from "@/src/mastra/tools";
+import { requireOwnerAdminAiToolUser } from "@/src/mastra/tools/auth";
 import { erpDataBundleSchema } from "@/src/mastra/tools/schemas";
 
 const workflowInputSchema = z.object({
@@ -64,12 +62,31 @@ export async function runGenerateMorningSummary(input: GenerateMorningSummaryInp
 async function generateMorningSummary(
   input: GenerateMorningSummaryInput,
 ): Promise<GenerateMorningSummaryResult> {
-  const user = await getAuthorizedSummaryUser(input.generatedByUserId);
-  const sourceData = erpDataBundleSchema.parse(await getDashboardData({ limit: 8 }));
+  const user = await requireOwnerAdminAiToolUser(input.generatedByUserId);
   const aiRun = await startAiRun({
     createdBy: user.id,
     reasoningLevel: "high",
   });
+
+  let sourceData: typeof erpDataBundleSchema._output;
+
+  try {
+    sourceData = erpDataBundleSchema.parse(
+      await getDashboardData({
+        limit: 8,
+        requesterUserId: user.id,
+      }),
+    );
+  } catch (dataError) {
+    await completeAiRun({
+      aiRunId: aiRun.id,
+      status: "failed",
+      reasoningLevel: "high",
+      errorMessage: `Data fetch failed: ${getErrorMessage(dataError)}`,
+    });
+
+    throw dataError;
+  }
 
   try {
     const summary = await attemptSummaryGeneration(sourceData, "high");
@@ -137,25 +154,6 @@ async function generateMorningSummary(
       throw fallbackError;
     }
   }
-}
-
-async function getAuthorizedSummaryUser(userId: string) {
-  const user = await db.query.users.findFirst({
-    where: eq(schema.users.id, userId),
-    with: {
-      role: true,
-    },
-  });
-
-  if (!user || user.status !== "active") {
-    throw new ForbiddenError("AI summary generation requires an active user.");
-  }
-
-  if (!["owner", "admin"].includes(user.role.name)) {
-    throw new ForbiddenError("Only owner or admin can generate AI summaries.");
-  }
-
-  return user;
 }
 
 async function attemptSummaryGeneration(

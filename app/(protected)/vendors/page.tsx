@@ -12,8 +12,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { ArchivedToggle } from "@/components/shared/archived-toggle";
+import { ArchiveButton } from "@/components/shared/archive-button";
+import { RestoreButton } from "@/components/shared/restore-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { requirePageRole } from "@/src/lib/auth/permissions";
-import { getVendors } from "@/src/server/actions/vendors";
+import {
+  archiveVendorAction,
+  deleteVendorAction,
+  getVendors,
+  restoreVendorAction,
+} from "@/src/server/actions/vendors";
 import { vendorCategoryLabels, VENDOR_CATEGORIES, type VendorCategory } from "@/src/features/vendors/constants";
 import type { VendorFilters } from "@/src/features/vendors/schemas";
 import { VendorDialog } from "./vendor-dialog";
@@ -28,6 +37,7 @@ export default async function VendorsPage({
   await requirePageRole(["owner", "admin", "purchasing"]);
 
   const params = await searchParams;
+  const showArchived = getParam(params.archived) === "true";
   const rawCategory =
     typeof params.category === "string" ? params.category : undefined;
   const category = (
@@ -41,15 +51,20 @@ export default async function VendorsPage({
     category,
   };
 
-  const vendors = await getVendors(filters);
+  const vendors = await getVendors(filters, showArchived);
 
   return (
     <PageContainer>
       <PageHeader
         title="Vendors"
         description="Manage suppliers, contact details, and categories."
-        action={<VendorDialog mode="create" />}
+        action={
+          showArchived ? undefined : <VendorDialog mode="create" />
+        }
       />
+      <div className="mb-4 flex flex-col gap-3">
+        <ArchivedToggle />
+      </div>
       <DataTableShell>
         <Table>
           <TableHeader>
@@ -67,7 +82,11 @@ export default async function VendorsPage({
                 <TableCell colSpan={5}>
                   <RecordEmptyState
                     title="No vendors"
-                    description="Add your first supplier to start tracking material sources."
+                    description={
+                      showArchived
+                        ? "Archived vendors will appear here."
+                        : "Add your first supplier to start tracking material sources."
+                    }
                     className="border-0 p-6"
                   />
                 </TableCell>
@@ -98,7 +117,25 @@ export default async function VendorsPage({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <VendorDialog mode="edit" initialData={vendor} />
+                    {showArchived ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <RestoreButton
+                          action={restoreVendorAction.bind(null, vendor.id)}
+                          label="Restore"
+                        />
+                        <DeleteConfirmationDialog
+                          entityLabel={vendor.vendorName}
+                          deleteAction={deleteVendorAction.bind(null, vendor.id)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end gap-2">
+                        <VendorDialog mode="edit" initialData={vendor} />
+                        <ArchiveButton
+                          action={archiveVendorAction.bind(null, vendor.id)}
+                        />
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -108,4 +145,8 @@ export default async function VendorsPage({
       </DataTableShell>
     </PageContainer>
   );
+}
+
+function getParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }

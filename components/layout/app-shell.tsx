@@ -20,9 +20,11 @@ function AppShell({
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset className="min-w-0">
+      <SidebarInset className="min-w-0 bg-muted/20">
         <AppHeader user={user} />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col bg-background">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )

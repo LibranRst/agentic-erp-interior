@@ -3,14 +3,15 @@ import { desc } from "drizzle-orm";
 
 import { db, schema } from "@/src/lib/db";
 
-import { boundedLimitSchema, dailyUpdateSchema } from "./schemas";
+import { requireOwnerAdminAiToolUser } from "./auth";
+import { authorizedToolInputSchema, dailyUpdateSchema } from "./schemas";
 import { clampLimit, READ_ONLY_TOOL_ANNOTATIONS, toDateOnly } from "./utils";
 
 export const getLatestDailyUpdatesTool = createTool({
   id: "get-latest-daily-updates",
   description:
     "Fetch recent PM daily updates through safe Drizzle queries, without exposing raw contact data.",
-  inputSchema: boundedLimitSchema,
+  inputSchema: authorizedToolInputSchema,
   outputSchema: dailyUpdateSchema.array(),
   mcp: {
     annotations: READ_ONLY_TOOL_ANNOTATIONS,
@@ -18,7 +19,12 @@ export const getLatestDailyUpdatesTool = createTool({
   execute: async (input) => getLatestDailyUpdates(input),
 });
 
-export async function getLatestDailyUpdates(input: { limit?: number } = {}) {
+export async function getLatestDailyUpdates(input: {
+  limit?: number;
+  requesterUserId: string;
+}) {
+  await requireOwnerAdminAiToolUser(input.requesterUserId);
+
   const limit = clampLimit(input.limit);
 
   const updates = await db.query.dailyUpdates.findMany({

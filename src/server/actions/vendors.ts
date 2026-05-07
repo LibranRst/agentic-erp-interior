@@ -21,14 +21,17 @@ import { getZodFieldErrors } from "@/src/lib/forms";
 
 const vendorIdSchema = z.uuid("Vendor id is invalid.");
 
-export async function getVendors(filters: unknown = {}) {
+export async function getVendors(
+  filters: unknown = {},
+  includeArchived = false,
+) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "vendor:view");
   requireRole(currentUser, ["owner", "admin", "purchasing"]);
 
   const parsed = vendorFiltersSchema.safeParse(filters);
 
-  return getVendorsQuery(parsed.success ? parsed.data : {});
+  return getVendorsQuery(parsed.success ? parsed.data : {}, includeArchived);
 }
 
 export async function createVendorAction(
@@ -116,4 +119,52 @@ function toVendorValues(data: VendorMutationInput) {
     category: data.category ?? null,
     notes: data.notes ?? null,
   } satisfies typeof schema.vendors.$inferInsert;
+}
+
+export async function archiveVendorAction(vendorId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "vendor:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = vendorIdSchema.safeParse(vendorId);
+  if (!parsed.success) return;
+
+  await db
+    .update(schema.vendors)
+    .set({ archivedAt: new Date(), archivedBy: currentUser.id })
+    .where(eq(schema.vendors.id, parsed.data));
+
+  revalidatePath("/vendors");
+  revalidatePath("/archived");
+}
+
+export async function restoreVendorAction(vendorId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "vendor:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = vendorIdSchema.safeParse(vendorId);
+  if (!parsed.success) return;
+
+  await db
+    .update(schema.vendors)
+    .set({ archivedAt: null, archivedBy: null })
+    .where(eq(schema.vendors.id, parsed.data));
+
+  revalidatePath("/vendors");
+  revalidatePath("/archived");
+}
+
+export async function deleteVendorAction(vendorId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "vendor:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = vendorIdSchema.safeParse(vendorId);
+  if (!parsed.success) return;
+
+  await db.delete(schema.vendors).where(eq(schema.vendors.id, parsed.data));
+
+  revalidatePath("/vendors");
+  revalidatePath("/archived");
 }

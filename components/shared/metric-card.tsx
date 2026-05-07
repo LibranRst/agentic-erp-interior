@@ -38,9 +38,15 @@ function MetricCard({
         ) : null}
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex items-end justify-between gap-3">
-        <div className="text-3xl font-medium tracking-normal">{value}</div>
-        {badge ? <Badge variant="secondary">{badge}</Badge> : null}
+      <CardContent className="flex min-w-0 flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 break-words text-3xl font-medium tracking-normal">
+          {value}
+        </div>
+        {badge ? (
+          <Badge variant="secondary" className="max-w-full whitespace-normal">
+            {badge}
+          </Badge>
+        ) : null}
       </CardContent>
     </Card>
   )

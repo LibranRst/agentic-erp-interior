@@ -8,6 +8,10 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
+import {
+  DataTableShell,
+  RecordEmptyState,
+} from "@/components/shared/data-table";
 import { MetricCard } from "@/components/shared/metric-card";
 import { ProjectDocumentationUploader } from "@/components/shared/project-documentation-uploader";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +22,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -269,48 +267,50 @@ export default async function ProjectDetailPage({
             }
           >
             {project.dailyUpdates.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Updated By</TableHead>
-                    <TableHead>Summary</TableHead>
-                    <TableHead>Health</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead>Attachments</TableHead>
-                    <TableHead>Next Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {project.dailyUpdates.map((update) => (
-                    <TableRow key={update.id}>
-                      <TableCell>{formatDate(update.updateDate)}</TableCell>
-                      <TableCell>{update.updater?.name ?? "Unknown"}</TableCell>
-                      <TableCell className="min-w-72">
-                        {update.progressSummary}
-                      </TableCell>
-                      <TableCell>
-                        <DailyUpdateHealthBadge
-                          healthStatus={update.healthStatus}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {update.progressPercentage !== null
-                          ? `${update.progressPercentage}%`
-                          : "Not set"}
-                      </TableCell>
-                      <TableCell className="min-w-52">
-                        <MediaLinks
-                          mediaAssets={mediaByDailyUpdateId.get(update.id) ?? []}
-                        />
-                      </TableCell>
-                      <TableCell className="min-w-64 text-muted-foreground">
-                        {update.nextAction ?? "Not set"}
-                      </TableCell>
+              <DataTableShell>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Updated By</TableHead>
+                      <TableHead>Summary</TableHead>
+                      <TableHead>Health</TableHead>
+                      <TableHead>Progress</TableHead>
+                      <TableHead>Attachments</TableHead>
+                      <TableHead>Next Action</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {project.dailyUpdates.map((update) => (
+                      <TableRow key={update.id}>
+                        <TableCell>{formatDate(update.updateDate)}</TableCell>
+                        <TableCell>{update.updater?.name ?? "Unknown"}</TableCell>
+                        <TableCell className="min-w-72">
+                          {update.progressSummary}
+                        </TableCell>
+                        <TableCell>
+                          <DailyUpdateHealthBadge
+                            healthStatus={update.healthStatus}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {update.progressPercentage !== null
+                            ? `${update.progressPercentage}%`
+                            : "Not set"}
+                        </TableCell>
+                        <TableCell className="min-w-52">
+                          <MediaLinks
+                            mediaAssets={mediaByDailyUpdateId.get(update.id) ?? []}
+                          />
+                        </TableCell>
+                        <TableCell className="min-w-64 text-muted-foreground">
+                          {update.nextAction ?? "Not set"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </DataTableShell>
             ) : (
               <EmptyState
                 title="No daily updates"
@@ -323,77 +323,83 @@ export default async function ProjectDetailPage({
         <TabsContent value="design">
           <DataCard title="Design / DED" description="Design task snapshot.">
             {project.designTasks.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Task</TableHead>
-                    <TableHead>Designer</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Approval</TableHead>
-                    <TableHead>Due</TableHead>
-                    <TableHead>Files</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {project.designTasks.map((task) => {
-                    const taskMedia = mediaByDesignTaskId.get(task.id) ?? [];
+              <DataTableShell>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Task</TableHead>
+                      <TableHead>Designer</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approval</TableHead>
+                      <TableHead>Due</TableHead>
+                      <TableHead>Files</TableHead>
+                      <TableHead>Notes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {project.designTasks.map((task) => {
+                      const taskMedia = mediaByDesignTaskId.get(task.id) ?? [];
 
-                    return (
-                      <TableRow key={task.id}>
-                        <TableCell className="font-medium">
-                          {task.taskName}
-                        </TableCell>
-                        <TableCell>{task.designer?.name ?? "Unassigned"}</TableCell>
-                        <TableCell>{formatEnumLabel(task.designType)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              task.status === "blocked"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {formatEnumLabel(task.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatEnumLabel(task.approvalStatus)}</TableCell>
-                        <TableCell>{formatDate(task.dueDate)}</TableCell>
-                        <TableCell className="min-w-56">
-                          {taskMedia.length > 0 ? (
-                            <div className="flex flex-col gap-1">
-                              {taskMedia.slice(0, 2).map((asset) => (
-                                <a
-                                  key={asset.id}
-                                  href={asset.imagekitUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="truncate text-sm hover:underline"
-                                >
-                                  {asset.fileName}
-                                </a>
-                              ))}
-                              {taskMedia.length > 2 ? (
-                                <span className="text-xs text-muted-foreground">
-                                  +{taskMedia.length - 2} more files
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              No files
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="min-w-64 text-muted-foreground">
-                          {task.notes ?? "No notes"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                      return (
+                        <TableRow key={task.id}>
+                          <TableCell className="font-medium">
+                            {task.taskName}
+                          </TableCell>
+                          <TableCell>
+                            {task.designer?.name ?? "Unassigned"}
+                          </TableCell>
+                          <TableCell>{formatEnumLabel(task.designType)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                task.status === "blocked"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                            >
+                              {formatEnumLabel(task.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {formatEnumLabel(task.approvalStatus)}
+                          </TableCell>
+                          <TableCell>{formatDate(task.dueDate)}</TableCell>
+                          <TableCell className="min-w-56">
+                            {taskMedia.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {taskMedia.slice(0, 2).map((asset) => (
+                                  <a
+                                    key={asset.id}
+                                    href={asset.imagekitUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="truncate text-sm hover:underline"
+                                  >
+                                    {asset.fileName}
+                                  </a>
+                                ))}
+                                {taskMedia.length > 2 ? (
+                                  <span className="text-xs text-muted-foreground">
+                                    +{taskMedia.length - 2} more files
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                No files
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-64 text-muted-foreground">
+                            {task.notes ?? "No notes"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </DataTableShell>
             ) : (
               <EmptyState
                 title="No design tasks"
@@ -406,7 +412,8 @@ export default async function ProjectDetailPage({
         <TabsContent value="materials">
           <DataCard title="Materials" description="Material and vendor risks.">
             {project.materials.length > 0 ? (
-              <Table>
+              <DataTableShell>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Material</TableHead>
@@ -445,7 +452,8 @@ export default async function ProjectDetailPage({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </DataTableShell>
             ) : (
               <EmptyState
                 title="No materials"
@@ -458,7 +466,8 @@ export default async function ProjectDetailPage({
         <TabsContent value="sales">
           <DataCard title="Sales Info" description="Converted lead context.">
             {project.leads.length > 0 ? (
-              <Table>
+              <DataTableShell>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Lead</TableHead>
@@ -489,7 +498,8 @@ export default async function ProjectDetailPage({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </DataTableShell>
             ) : (
               <EmptyState
                 title="No sales info"
@@ -502,7 +512,8 @@ export default async function ProjectDetailPage({
         <TabsContent value="content">
           <DataCard title="Content" description="Content readiness records.">
             {project.contentAssets.length > 0 ? (
-              <Table>
+              <DataTableShell>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Room / Area</TableHead>
@@ -537,7 +548,8 @@ export default async function ProjectDetailPage({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </DataTableShell>
             ) : (
               <EmptyState
                 title="No content records"
@@ -689,9 +701,7 @@ function DataCard({
           {action}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">{children}</div>
-      </CardContent>
+      <CardContent className="min-w-0">{children}</CardContent>
     </Card>
   );
 }
@@ -739,12 +749,11 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <Empty>
-      <EmptyHeader>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-    </Empty>
+    <RecordEmptyState
+      title={title}
+      description={description}
+      className="border-0 bg-transparent"
+    />
   );
 }
 

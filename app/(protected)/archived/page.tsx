@@ -14,6 +14,7 @@ import { ArchivedMaterialsTab } from "./archived-materials-tab";
 import { ArchivedLeadsTab } from "./archived-leads-tab";
 import { ArchivedContentTab } from "./archived-content-tab";
 import { ArchivedDailyUpdatesTab } from "./archived-daily-updates-tab";
+import { ArchivedVendorsTab } from "./archived-vendors-tab";
 
 export default async function ArchivedPage() {
   await requirePageRole(["owner", "admin"]);
@@ -28,8 +29,8 @@ export default async function ArchivedPage() {
         <CardHeader>
           <CardTitle>Archived Records</CardTitle>
           <CardDescription>
-            Items archived from projects, design, materials, sales, content, and
-            daily updates.
+            Items archived from projects, design, materials, sales, content,
+            daily updates, and vendors.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -41,6 +42,7 @@ export default async function ArchivedPage() {
               <TabsTrigger value="leads">Leads</TabsTrigger>
               <TabsTrigger value="content">Content</TabsTrigger>
               <TabsTrigger value="updates">Updates</TabsTrigger>
+              <TabsTrigger value="vendors">Vendors</TabsTrigger>
             </TabsList>
             <TabsContent value="projects" className="pt-4">
               <ArchivedProjectsTab />
@@ -59,6 +61,9 @@ export default async function ArchivedPage() {
             </TabsContent>
             <TabsContent value="updates" className="pt-4">
               <ArchivedDailyUpdatesTab />
+            </TabsContent>
+            <TabsContent value="vendors" className="pt-4">
+              <ArchivedVendorsTab />
             </TabsContent>
           </Tabs>
         </CardContent>

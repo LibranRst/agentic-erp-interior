@@ -250,3 +250,73 @@ MVP can be considered ready for internal testing when:
 [ ] All media is stored in ImageKit.
 [ ] Permissions are enforced server-side.
 ```
+
+---
+
+## 16. Sprint G Final QA Result
+
+Reviewed: 2026-05-07
+
+Overall result: Ready for internal beta with limitations
+
+Static verification:
+
+```txt
+[x] bun run typecheck passed.
+[x] bun run lint passed.
+[x] bun run build passed.
+[x] bun run mastra:build passed.
+[x] bun run db:migrate passed against confirmed safe development database.
+[x] bun run db:seed passed against confirmed safe development database.
+```
+
+Search verification:
+
+```txt
+[x] No placeholder route code found in app/components/src for Scaffold, placeholder page, ModulePage, or projectRows.
+[x] No app/components/src implementation references found for invoice, payroll, client portal, SaaS billing, or WhatsApp automation.
+```
+
+Browser QA status:
+
+```txt
+[x] Login route responds with 200 OK on the existing localhost dev server.
+[x] Unauthenticated /dashboard and /projects requests redirect to /login.
+[x] Owner login verified.
+[x] Dashboard company condition verified.
+[x] Latest PM update verified on dashboard and project detail.
+[x] PM daily update create flow verified.
+[x] Design/DED browser create flow verified.
+[x] Material browser create flow verified.
+[x] Sales/leads browser create flow verified.
+[x] Content readiness browser create flow verified.
+[x] AI summary route and saved summary viewing verified.
+[ ] AI summary generation attempted but failed because Gemini API key is invalid.
+[x] ImageKit upload-auth verified.
+[ ] End-to-end ImageKit binary upload not performed.
+[x] PM rejected from owner/admin-only /users and /ai-summary routes.
+```
+
+Current blockers:
+
+```txt
+1. GOOGLE_GENERATIVE_AI_API_KEY is invalid; `ai_runs` recorded fallback_failed with "API key not valid. Please pass a valid API key."
+2. End-to-end ImageKit binary upload was not performed; upload-auth returns a valid signed payload.
+3. Owner/admin lead conversion was not separately exercised during browser QA.
+4. Full non-owner matrix for every role was not separately exercised; PM restriction smoke test passed.
+```
+
+Required internal beta browser pass:
+
+```txt
+1. Owner login -> /dashboard.
+2. Confirm active/urgent projects, latest PM updates, design/DED, material issues, sales/leads, content readiness, and latest AI summary sections.
+3. Owner/admin generate AI morning summary from /dashboard or /ai-summary.
+4. PM creates a daily update for assigned project.
+5. Designer creates/updates design/DED task for assigned project.
+6. Purchasing creates/updates material issue and vendor relation.
+7. Sales creates/updates lead; owner/admin converts qualified lead.
+8. Marketing creates/updates content asset and readiness status.
+9. Owner/admin invites user, changes role/status, and revokes pending invite.
+10. Non-owner users are rejected from owner/admin-only routes and actions.
+```

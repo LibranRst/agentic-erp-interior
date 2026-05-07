@@ -18,7 +18,7 @@ import {
 
 type DeleteConfirmationDialogProps = {
   entityLabel: string;
-  deleteAction: () => Promise<{ status: string; message: string }>;
+  deleteAction: () => Promise<unknown>;
 };
 
 export function DeleteConfirmationDialog({

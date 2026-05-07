@@ -22,8 +22,10 @@ function DataTableShell({
   return (
     <div
       className={cn(
-        "min-w-0 overflow-hidden rounded-xl border bg-card",
+        "min-w-0 overflow-hidden rounded-xl border bg-card shadow-xs",
         "[&_[data-slot=table-container]]:max-w-full",
+        "[&_[data-slot=table-container]]:overscroll-x-contain",
+        "[&_[data-slot=table]]:min-w-max",
         "[&_[data-slot=table-head]]:bg-muted/40",
         "[&_[data-slot=table-head]]:text-xs [&_[data-slot=table-head]]:uppercase [&_[data-slot=table-head]]:tracking-normal",
         "[&_[data-slot=table-row]]:hover:bg-muted/40",
@@ -45,7 +47,12 @@ function RecordEmptyState({
   className?: string;
 }) {
   return (
-    <Empty className={cn("border", className)}>
+    <Empty
+      className={cn(
+        "rounded-xl border border-dashed bg-muted/20 p-8",
+        className,
+      )}
+    >
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <HugeiconsIcon icon={SearchRemoveIcon} strokeWidth={2} />
@@ -61,7 +68,7 @@ function LoadingMetricGrid() {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="rounded-xl border bg-card p-4">
+        <div key={index} className="rounded-xl border bg-card p-4 shadow-xs">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="mt-3 h-3 w-40" />
           <Skeleton className="mt-6 h-8 w-20" />
@@ -73,7 +80,7 @@ function LoadingMetricGrid() {
 
 function LoadingTableBlock({ rows = 6 }: { rows?: number }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-card p-4 shadow-xs">
       <Skeleton className="h-5 w-44" />
       <Skeleton className="mt-2 h-4 w-72 max-w-full" />
       <div className="mt-5 flex flex-col gap-3">

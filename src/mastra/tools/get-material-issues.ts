@@ -7,14 +7,15 @@ import {
 } from "@/src/features/materials/constants";
 import { db, schema } from "@/src/lib/db";
 
-import { boundedLimitSchema, materialIssueSchema } from "./schemas";
+import { requireOwnerAdminAiToolUser } from "./auth";
+import { authorizedToolInputSchema, materialIssueSchema } from "./schemas";
 import { clampLimit, READ_ONLY_TOOL_ANNOTATIONS, toDateOnly } from "./utils";
 
 export const getMaterialIssuesTool = createTool({
   id: "get-material-issues",
   description:
     "Fetch delayed, problematic, high urgency, or critical material issues through safe Drizzle queries.",
-  inputSchema: boundedLimitSchema,
+  inputSchema: authorizedToolInputSchema,
   outputSchema: materialIssueSchema.array(),
   mcp: {
     annotations: READ_ONLY_TOOL_ANNOTATIONS,
@@ -22,7 +23,12 @@ export const getMaterialIssuesTool = createTool({
   execute: async (input) => getMaterialIssues(input),
 });
 
-export async function getMaterialIssues(input: { limit?: number } = {}) {
+export async function getMaterialIssues(input: {
+  limit?: number;
+  requesterUserId: string;
+}) {
+  await requireOwnerAdminAiToolUser(input.requesterUserId);
+
   const limit = clampLimit(input.limit);
 
   const materials = await db.query.materials.findMany({

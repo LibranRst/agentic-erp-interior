@@ -475,6 +475,8 @@ export const vendors = pgTable("vendors", {
   phone: text("phone"),
   category: text("category"),
   notes: text("notes"),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  archivedBy: uuid("archived_by").references(() => users.id),
   ...timestamps,
 });
 

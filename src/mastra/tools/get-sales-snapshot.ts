@@ -4,7 +4,8 @@ import { and, asc, count, desc, eq, inArray, isNotNull, lte, or } from "drizzle-
 import { OPEN_FOLLOW_UP_LEAD_STATUSES } from "@/src/features/leads/constants";
 import { db, schema } from "@/src/lib/db";
 
-import { boundedLimitSchema, salesSnapshotSchema } from "./schemas";
+import { requireOwnerAdminAiToolUser } from "./auth";
+import { authorizedToolInputSchema, salesSnapshotSchema } from "./schemas";
 import {
   clampLimit,
   countValue,
@@ -17,7 +18,7 @@ export const getSalesSnapshotTool = createTool({
   id: "get-sales-snapshot",
   description:
     "Fetch Dekoria sales lead counts and follow-up priorities through safe Drizzle queries.",
-  inputSchema: boundedLimitSchema,
+  inputSchema: authorizedToolInputSchema,
   outputSchema: salesSnapshotSchema,
   mcp: {
     annotations: READ_ONLY_TOOL_ANNOTATIONS,
@@ -25,7 +26,12 @@ export const getSalesSnapshotTool = createTool({
   execute: async (input) => getSalesSnapshot(input),
 });
 
-export async function getSalesSnapshot(input: { limit?: number } = {}) {
+export async function getSalesSnapshot(input: {
+  limit?: number;
+  requesterUserId: string;
+}) {
+  await requireOwnerAdminAiToolUser(input.requesterUserId);
+
   const limit = clampLimit(input.limit);
   const today = getJakartaDate();
 

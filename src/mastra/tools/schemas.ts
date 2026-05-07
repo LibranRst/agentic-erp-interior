@@ -4,6 +4,10 @@ export const boundedLimitSchema = z.object({
   limit: z.number().int().min(1).max(20).default(6),
 });
 
+export const authorizedToolInputSchema = boundedLimitSchema.extend({
+  requesterUserId: z.uuid(),
+});
+
 export const emptyInputSchema = z.object({});
 
 export const metricSchema = z.object({

@@ -9,7 +9,7 @@ function PageContainer({
   return (
     <main
       className={cn(
-        "mx-auto flex min-w-0 w-full max-w-7xl flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8",
+        "mx-auto flex w-full min-w-0 max-w-7xl flex-1 flex-col gap-5 p-4 sm:gap-6 sm:p-6 lg:p-8",
         className
       )}
       {...props}
@@ -27,15 +27,17 @@ function PageHeader({
   action?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-2xl font-medium tracking-normal">{title}</h1>
+        <h1 className="text-balance text-2xl font-medium tracking-normal">
+          {title}
+        </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           {description}
         </p>
       </div>
       {action ? (
-        <div className="flex w-full shrink-0 sm:w-auto sm:justify-end">
+        <div className="flex w-full min-w-0 shrink-0 flex-wrap gap-2 sm:w-auto sm:justify-end">
           {action}
         </div>
       ) : null}

@@ -155,6 +155,7 @@ export async function getMaterialFormOptions() {
         category: true,
         contactPerson: true,
       },
+      where: isNull(schema.vendors.archivedAt),
       orderBy: [asc(schema.vendors.vendorName)],
     }),
   ]);

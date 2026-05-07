@@ -2,321 +2,312 @@
 
 Audit date: 2026-05-07
 
-Scope: current implementation audited against `AGENTS.md`, `docs/PRD.md`, `docs/FLOWS.md`, `docs/MVP_SYSTEM_BLUEPRINT.md`, `docs/DATABASE_SCHEMA.md`, `docs/API_ACTIONS.md`, `docs/UI_SYSTEM_GUIDE.md`, `docs/AI_AGENT_INSTRUCTIONS.md`, and `docs/MVP_ACCEPTENCE_CHECKLIST.md`.
+Sprint: G - Final QA and beta readiness
 
-Note: the requested checklist path `docs/MVP_ACCEPTANCE_CHECKLIST.md` does not exist. The repository currently contains `docs/MVP_ACCEPTENCE_CHECKLIST.md`.
+Scope: current implementation audited against `AGENTS.md`, `docs/PRD.md`, `docs/FLOWS.md`, `docs/MVP_SYSTEM_BLUEPRINT.md`, `docs/DATABASE_SCHEMA.md`, `docs/API_ACTIONS.md`, `docs/UI_SYSTEM_GUIDE.md`, `docs/AI_AGENT_INSTRUCTIONS.md`, and `docs/MVP_ACCEPTANCE_CHECKLIST.md`.
 
-Verification:
+Verification snapshot:
 
-- `bun run lint` passed.
 - `bun run typecheck` passed.
+- `bun run lint` passed.
 - `bun run build` passed.
-- No implementation files were edited during this audit.
+- `bun run mastra:build` passed.
+- `bun run db:migrate` passed against a confirmed safe development database.
+- `bun run db:seed` passed against a confirmed safe development database.
+- Authenticated browser QA ran with seeded role users and temporary QA credentials in the safe development database.
+
+Overall status: Ready for internal beta with limitations
+
+Reason: static app quality, migration, seed, owner login, main browser workflows, non-owner redirects, and ImageKit upload-auth are verified. Live AI generation is blocked by an invalid Gemini API key, but the exact blocker is documented and saved summaries are viewable.
 
 ## 1. Owner Dashboard
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/dashboard/page.tsx` loads live project metrics, design metrics, material metrics, sales metrics, latest PM updates, material issues, dashboard leads, content-ready projects, and latest AI summary.
-- `app/(protected)/dashboard/page.tsx` still defines hardcoded `projectRows` for the Project Health Overview.
-- `src/features/projects/queries.ts`, `src/features/daily-updates/queries.ts`, `src/features/design/queries.ts`, `src/features/materials/queries.ts`, `src/features/leads/queries.ts`, and `src/features/content/queries.ts` provide the dashboard data sources.
-- `app/(protected)/loading.tsx` provides a protected-layout loading state.
+- `app/(protected)/dashboard/page.tsx` loads live project metrics, design metrics, material metrics, sales metrics, project health overview, urgent projects, latest PM updates, material issues, dashboard leads, content-ready projects, and latest AI summary.
+- Project Health Overview uses `getProjectHealthOverviewQuery`, not a hardcoded `projectRows` array.
+- `app/(protected)/dashboard/error.tsx` provides dashboard route-level error handling.
+- `app/(protected)/loading.tsx` provides protected-layout loading.
 
-Exact missing pieces:
+Remaining gaps:
 
-- Project Health Overview still uses hardcoded demo rows instead of live database data.
-- No route-level `error.tsx` exists for dashboard failure states.
-- Dashboard data is not consistently role-scoped; any authenticated user with `dashboard:view` can see broad company metrics.
-- No dedicated dashboard query/action module exists for the full dashboard data contract.
+- Authenticated owner dashboard scenario is verified.
+- Dashboard data is still a broad command-center view for every role with `dashboard:view`; role-specific dashboard redaction remains MVP-light.
 
-Risk level: High
+Risk level: Medium
 
-Suggested fix order: 1
+Category: Can ship with MVP-light dashboard role scoping
 
 ## 2. Project Tracking
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/projects/page.tsx` implements project list, metrics, filters, table, and empty state.
-- `app/(protected)/projects/new/page.tsx` implements owner/admin-only project creation.
-- `app/(protected)/projects/[projectId]/page.tsx` implements project detail tabs and project edit access for owner/admin.
-- `src/server/actions/projects.ts` implements `getProjects`, `getProjectById`, `createProjectAction`, and `updateProjectAction`.
-- `src/features/projects/schemas.ts` validates project mutation input with Zod.
-- `src/lib/db/schema.ts` includes project PM/designer relations, status, health, progress, deadlines, budget warning, and content-ready status.
+- Project list, create, detail, edit, archive, restore, and delete paths exist.
+- Server actions validate session, permission, role, UUIDs, and Zod form input.
+- PM limited update actions exist for status, health, and progress, scoped to assigned project.
+- Project detail shows linked daily updates, design tasks, materials, leads, content assets, and media.
 
-Exact missing pieces:
+Remaining gaps:
 
-- PM limited status/health/progress update is not implemented, despite the API blueprint allowing limited PM updates.
-- Project list/detail access is not scoped for non-owner roles beyond authentication and `project:view`.
-- No delete/archive action exists.
-- No dedicated quick actions for `updateProjectStatus`, `updateProjectHealth`, or `updateProjectProgress`.
-- Project detail AI Summary tab is scaffolded by an empty `aiSummaries` array from `getProjectByIdQuery`, so project-specific AI summaries are not functional.
+- Authenticated owner project list/detail workflow is verified.
+- Owner/admin project create/edit and PM limited update were not separately exercised in browser.
+- Project-specific AI summary tab is still not connected to persisted summaries.
 
-Risk level: High
+Risk level: Medium
 
-Suggested fix order: 2
+Category: Can ship with limitation
 
 ## 3. Daily PM Updates
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/daily-updates/page.tsx` implements Daily Updates route, metrics, filters, create dialog, table, and empty state.
-- `src/server/actions/daily-updates.ts` implements `createDailyUpdateAction`, page data loading, latest updates, permission checks, PM assignment check on create, project progress/health sync, and media metadata creation.
-- `src/features/daily-updates/schemas.ts` validates project, date, summary, issue/blocker, next action, progress, health, and media.
-- `app/(protected)/projects/[projectId]/page.tsx` displays daily updates on project detail.
-- `app/(protected)/dashboard/page.tsx` displays latest PM updates.
+- Daily update create/update actions exist.
+- PM users can only create/update updates for assigned projects.
+- Daily updates can update project progress and health.
+- Media metadata can be attached through `media_assets`.
+- Archive, restore, and delete actions exist for owner/admin.
 
-Exact missing pieces:
+Remaining gaps:
 
-- No update action for daily updates.
-- No delete action for daily updates.
-- No edit UI for submitted PM updates.
-- No route-level error state.
-- Dashboard and page loading state is generic, not module-specific.
+- Authenticated PM create workflow is verified through the browser.
+- Delete remains available for owner/admin after archive; internal policy should favor archive for operational history.
 
 Risk level: Medium
 
-Suggested fix order: 5
+Category: Can ship with owner/admin-only destructive delete restriction
 
 ## 4. Design / DED Tracker
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/design/page.tsx` implements design task list, metrics, filters, create/edit dialog, table, and empty state.
-- `src/server/actions/design.ts` implements create/update design task actions with session, permission, role checks, Zod validation, media metadata creation, and designer-only update ownership checks.
-- `src/features/design/schemas.ts` validates project, designer, task name, design type, status, approval status, revision count, due date, notes, and media.
-- `src/lib/db/schema.ts` includes `design_tasks` with project, designer, design type, status, approval status, revision count, and due date.
-- `app/(protected)/dashboard/page.tsx` shows pending design tasks.
+- Design task list, create/edit dialog, status badges, filters, and empty states exist.
+- Designer create/update flows validate assignment to the project/task.
+- Status-only and approval-only update actions exist.
+- Media metadata attachment and archive/restore/delete actions exist.
 
-Exact missing pieces:
+Remaining gaps:
 
-- Designer create flow can create tasks for any selected project; it does not validate that the designer is assigned to the project.
-- Owner/admin can create tasks without requiring an assigned designer.
-- No delete/archive action exists.
-- No dedicated status-only or approval-only update action exists.
-- No route-level error state.
+- Authenticated designer create workflow is verified through the browser.
+- No advanced approval engine exists, intentionally out of MVP.
 
 Risk level: Medium
 
-Suggested fix order: 6
+Category: Can ship with limitation
 
-## 5. Material Tracker
+## 5. Material Tracker And Vendors
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/materials/page.tsx` implements material list, metrics, filters, create/edit dialog, table, and empty state.
-- `src/server/actions/materials.ts` implements create/update material actions with session, permission, role checks, Zod validation, media metadata creation, and dashboard/project revalidation.
-- `src/features/materials/schemas.ts` validates project, material name, vendor, status, urgency, quantity, unit, ETA, issue notes, and media.
-- `src/lib/db/schema.ts` includes `materials` and `vendors`.
-- `app/(protected)/dashboard/page.tsx` shows material warnings.
+- Material list, create/update, status-only, urgency-only, archive/restore/delete actions exist.
+- Material records link to projects and vendors.
+- `/vendors` route exists for owner/admin/purchasing.
+- Material issue dashboard query exists.
 
-Exact missing pieces:
+Remaining gaps:
 
-- Vendor relation exists, but there is no vendor CRUD UI/action.
-- Purchasing users can update all material records; no ownership or project/team scoping exists.
-- No delete/archive action exists.
-- No dedicated status-only or urgency-only update action exists.
-- No route-level error state.
+- Authenticated purchasing create workflow is verified through the browser.
+- Purchasing ownership is MVP-light; no advanced team assignment model exists.
 
 Risk level: Medium
 
-Suggested fix order: 7
+Category: Must verify before internal beta; ownership model can ship with limitation
 
 ## 6. Sales / Leads Snapshot
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/sales/page.tsx` implements lead list, metrics, filters, create/edit dialog, conversion dialog, table, and empty state.
-- `src/server/actions/leads.ts` implements create/update/convert actions with session, permission, role checks, sales ownership scoping for updates, and project conversion.
-- `src/features/leads/schemas.ts` validates lead name, source, interest, value, status, assigned sales, follow-up date, notes, media, and conversion fields.
-- `app/(protected)/dashboard/page.tsx` shows sales snapshot and dashboard leads.
-- `src/lib/db/schema.ts` includes leads and converted project relation.
+- Sales page has lead list, filters, create/edit dialog, conversion dialog, and empty state.
+- Optional lead email is validated with Zod email validation.
+- Sales users can update assigned leads.
+- `convertLeadToProjectAction` uses one SQL CTE for lead update and project insert, avoiding a split success state.
+- Archive, restore, and delete actions exist for owner/admin.
 
-Exact missing pieces:
+Remaining gaps:
 
-- Lead email is stored as optional text and is not validated as an email address.
-- `convertLeadToProjectAction` is not transactional. If project creation succeeds but lead update fails, an orphan project can be created.
-- No delete/archive action exists.
-- Sales can only update assigned leads, but owner/admin can assign broadly without further workflow guardrails.
-- No route-level error state.
+- Authenticated sales create workflow is verified through the browser.
+- Owner/admin conversion workflow was not separately exercised.
+- Owner/admin assignment guardrails remain simple by design.
 
 Risk level: Medium
 
-Suggested fix order: 8
+Category: Can ship with limitation
 
 ## 7. Content Readiness
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/content/page.tsx` implements content list, metrics, filters, create/edit dialog, table, and empty state.
-- `src/server/actions/content.ts` implements create/update content asset actions with session, permission, role checks, Zod validation, media metadata creation, and project content-ready status sync.
-- `src/features/content/schemas.ts` validates project, room/area, visual status, footage status, content opportunity, suggested angle, status, publish URL, notes, and media.
-- `app/(protected)/dashboard/page.tsx` shows content readiness.
-- `src/lib/db/schema.ts` includes content assets and media assets.
+- Content list, filters, create/update dialog, status-only update, media metadata, and dashboard readiness snapshot exist.
+- Project content-ready status sync exists.
+- Archive, restore, and delete actions exist for owner/admin.
 
-Exact missing pieces:
+Remaining gaps:
 
-- No delete/archive action exists.
-- Marketing users can update all content assets; no assignee or project scoping exists.
-- Dashboard shows content-ready assets, but project-level readiness is only partially reflected.
-- No dedicated content status-only action exists.
-- No route-level error state.
+- Authenticated marketing create workflow is verified through the browser.
+- Marketing assignment/scoping remains MVP-light.
 
 Risk level: Medium
 
-Suggested fix order: 9
+Category: Can ship with limitation
 
 ## 8. AI Morning Summary
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `src/server/actions/ai-summary.ts` implements owner/admin-only `generateMorningSummaryAction`.
-- `src/mastra/workflows/generate-morning-summary.ts` implements a Mastra workflow, fetches dashboard data, calls OwnerOpsAgent, saves `ai_summaries`, and logs `ai_runs`.
-- `src/mastra/agents/owner-ops-agent.ts` defines OwnerOpsAgent, Bahasa Indonesia instructions, grounded-data rules, and Mastra tools.
-- `src/mastra/tools/get-dashboard-data.ts` builds the ERP data bundle from Drizzle queries.
-- `src/mastra/persistence/ai-runs.ts` and `src/mastra/persistence/ai-summaries.ts` persist AI run and summary records.
-- `app/(protected)/ai-summary/page.tsx` displays latest summary and history.
-- `app/(protected)/dashboard/page.tsx` displays latest AI summary and generate button for owner/admin.
+- `generateMorningSummaryAction` is owner/admin-only and calls the Mastra workflow.
+- `src/mastra/workflows/generate-morning-summary.ts` logs `ai_runs`, fetches dashboard data, calls OwnerOpsAgent, saves `ai_summaries`, and records fallback/failure states.
+- Mastra tool auth requires an active owner/admin user before fetching data.
+- OwnerOpsAgent instructions require Bahasa Indonesia, grounded data, missing-data clarity, and concise owner-friendly output.
 
-Exact missing pieces:
+Remaining gaps:
 
-- Live Gemini/Mastra generation was not verified with real API credentials during this audit.
-- Mastra tools do not receive current user context and do not independently validate user permissions.
-- If dashboard data fetching fails before `startAiRun`, no failed `ai_runs` record is created.
-- Only morning summary exists; project risk/design/material/content summary actions named in `docs/API_ACTIONS.md` are not implemented.
-- Project detail AI Summary tab is not connected to real summaries.
+- Browser generate-summary path was exercised with an authenticated owner.
+- Live Gemini/Mastra generation failed because the configured API key is invalid.
+- Only company-level morning summary is implemented; project risk/design/material/content summary actions remain post-MVP unless explicitly requested.
 
 Risk level: High
 
-Suggested fix order: 3
+Category: Can ship with limitation after replacing the invalid Gemini API key before AI generation demos
 
-## 9. Auth & Roles
+## 9. Auth, Permissions, Users
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `lib/auth.ts` configures Better Auth with Drizzle tables.
-- `proxy.ts` redirects protected paths without a session cookie.
-- `src/lib/auth/permissions.ts` defines roles, permissions, current user lookup, `requireUser`, `requirePermission`, `requireRole`, and protected page helpers.
-- `app/(public)/login/page.tsx` and `app/(public)/login/login-form.tsx` implement login.
-- `app/(protected)/users/page.tsx`, `app/(protected)/users/invite-user-form.tsx`, and `src/server/actions/users.ts` implement basic owner/admin invite flow and user listing.
+- Better Auth is configured.
+- Proxy redirects unauthenticated protected requests to `/login`.
+- Page and server action guards use active app user, permission, and role checks.
+- Users page supports invite creation, invite revoke, role changes, status changes, and avatar upload.
+- Invite acceptance creates Better Auth credentials and app user records.
 
-Exact missing pieces:
+Remaining gaps:
 
-- Proxy only checks session cookie presence; full active-user and app-role validation happens later in page/action code.
-- Dashboard data is visible to all roles with `dashboard:view`, without module-level redaction or scoping.
-- Sample seed users are app profiles only unless invite/auth account setup is completed.
-- No non-owner restriction test matrix is present.
-- No user status update, role update, or revoke UI is implemented, aside from invite revoke action.
+- End-to-end owner login is verified in browser.
+- PM redirect away from owner/admin-only `/users` and `/ai-summary` is verified.
+- Full non-owner matrix for every role was not separately exercised.
+- Proxy is cookie-presence based, with full role checks happening in page/action code; this is acceptable for MVP but should remain documented.
 
 Risk level: High
 
-Suggested fix order: 4
+Category: Can ship with limitation
 
-## 10. Media Assets
+## 10. Media Assets And ImageKit
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `src/lib/db/schema.ts` includes `media_assets` with ImageKit metadata fields.
-- `app/api/imagekit/upload-auth/route.ts` generates ImageKit upload auth and validates upload context.
-- `src/features/media/server.ts` persists uploaded media metadata.
-- `src/features/media/queries.ts` fetches media by project and related record.
-- Daily update, design, material, lead, content, project documentation, and avatar flows can save media metadata.
-- `app/(protected)/media/page.tsx` exists.
+- `media_assets` schema and Drizzle queries exist.
+- `app/api/imagekit/upload-auth/route.ts` validates session, role, upload context, and ImageKit env before signing uploads.
+- Module forms use `MediaUploader`.
+- `/media` is a read-only live library using `getMediaLibraryMetrics` and `getLatestMediaAssets`.
 
-Exact missing pieces:
+Remaining gaps:
 
-- `/media` route is a scaffold using `ModulePage`, hardcoded metrics, and hardcoded rows.
-- No real media library list/filter/view exists.
-- No media delete/archive action exists.
-- No upload UI exists on `/media`; uploads are embedded in module forms.
-- No route-level error state.
+- ImageKit upload-auth is verified and returns token, expire, signature, public key, folder path, and URL endpoint for an authenticated content upload context.
+- End-to-end binary upload to ImageKit CDN was not performed.
+- `/media` intentionally does not upload/delete media in MVP.
 
 Risk level: Medium
 
-Suggested fix order: 10
+Category: Can ship with limitation
 
-## 11. User & Role Management
+## 11. Archived Records
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `app/(protected)/users/page.tsx` lists active users and recent invites.
-- `app/(protected)/users/invite-user-form.tsx` creates manual setup links.
-- `app/(public)/invite/[token]/page.tsx` validates pending invites.
-- `app/(public)/invite/[token]/accept-invite-form.tsx` accepts invites and creates Better Auth credentials.
-- `src/server/actions/users.ts` implements create invite, revoke invite, accept invite, and user/invite query.
+- `/archived` route exists for owner/admin.
+- Archived tabs exist for projects, design, materials, leads, content, and daily updates.
+- Restore and delete actions are wired in archived tabs.
 
-Exact missing pieces:
+Remaining gaps:
 
-- No visible revoke invite button on the users page, despite server action existing.
-- No role change UI/action.
-- No user activation/deactivation UI/action.
-- No user edit flow.
-- No empty state for users/invites tables.
+- Authenticated owner/admin `/archived` route load is verified.
+- Archive/restore action click workflow was not separately exercised.
+- Hard delete should be used conservatively during internal beta.
 
 Risk level: Medium
 
-Suggested fix order: 11
+Category: Can ship with owner/admin-only limitation after workflow smoke check
 
-## 12. System Quality
+## 12. Settings
 
 Current status: Partial
 
-Evidence from files:
+Evidence:
 
-- `bun run lint` passed.
+- `/settings` is an owner/admin runtime status page.
+- It shows configured/missing state for required app/auth/database env and optional ImageKit/Gemini/Mastra env.
+- Secrets are not displayed.
+
+Remaining gaps:
+
+- This is not a full workspace settings system.
+
+Risk level: Low
+
+Category: Can ship with limitation
+
+## 13. System Quality
+
+Current status: Partial
+
+Evidence:
+
 - `bun run typecheck` passed.
+- `bun run lint` passed.
 - `bun run build` passed.
-- `app/(protected)/loading.tsx` provides a generic loading state.
-- `components/shared/data-table.tsx` provides shared table shell, empty state, and loading skeleton components.
-- `app/(protected)/media/page.tsx` and `app/(protected)/settings/page.tsx` are scaffold pages.
-- No `app/**/error.tsx` files exist.
+- `bun run mastra:build` passed.
+- `bun run db:migrate` passed.
+- `bun run db:seed` passed.
+- Canonical checklist exists at `docs/MVP_ACCEPTANCE_CHECKLIST.md`.
+- No placeholder route code was found in `app`, `components`, or `src` during Sprint G placeholder search.
 
-Exact missing pieces:
+Remaining gaps:
 
-- No route-level error boundaries.
-- `/media` and `/settings` are placeholder/scaffold routes.
-- The MVP checklist filename is misspelled as `MVP_ACCEPTENCE_CHECKLIST.md`.
-- No browser smoke test was run during this audit.
-- Seed command was not executed during this audit, so seed runtime success is not verified.
-- No explicit automated permission/regression tests exist.
+- No automated browser regression suite exists.
+- Live AI generation is blocked by invalid Gemini API key.
+- End-to-end ImageKit binary upload is not verified, but upload-auth is verified.
 
 Risk level: Medium
 
-Suggested fix order: 12
+Category: Can ship with limitations
 
-## Recommended Fix Order Summary
+## Readiness Categorization
 
-1. Replace hardcoded dashboard Project Health Overview with live scoped data.
-2. Complete project tracking authorization and PM limited update flows.
-3. Harden AI summary run logging, permission context, and runtime verification.
-4. Tighten auth/role visibility and non-owner restriction behavior.
-5. Add daily update edit/delete flows.
-6. Scope design task creation/update behavior.
-7. Complete material/vendor ownership gaps.
-8. Make lead conversion transactional and validate lead email.
-9. Scope content readiness updates and add archive/delete.
-10. Replace `/media` scaffold with real media library or remove it from MVP navigation.
-11. Finish user/invite management operations.
-12. Add route error boundaries, browser smoke checks, seed verification, and fix the checklist filename.
+Must fix before internal beta:
+
+1. None blocking if the team accepts AI generation as an environment limitation for the first internal beta.
+
+Can ship with limitation:
+
+1. AI generation is blocked by invalid `GOOGLE_GENERATIVE_AI_API_KEY`; saved summaries are viewable.
+2. `/media` remains a read-only library; uploads are embedded in module forms.
+3. End-to-end ImageKit binary upload was not performed; upload-auth is verified.
+4. `/settings` remains a runtime status page.
+5. Project-specific AI summaries are not connected yet.
+6. Purchasing and marketing scoping remain MVP-light.
+7. Hard delete exists for owner/admin but archive should be preferred.
+8. Manual QA may substitute for automated browser regression in the first internal beta.
+
+Post-MVP:
+
+1. Advanced finance, payroll, invoice automation, advanced CRM, client portal, WhatsApp automation, vendor payment tracking, advanced inventory, SaaS billing, advanced analytics, approval engines, autonomous AI actions, and native mobile apps.

@@ -25,13 +25,13 @@ Seed data should represent a realistic interior design and contractor workflow.
 
 ## 2. Seed Script Location
 
-Recommended file:
+Current file:
 
 ```txt
-src/db/seed.ts
+src/lib/db/seed.ts
 ```
 
-Recommended command:
+Current command:
 
 ```bash
 bun run db:seed
@@ -42,9 +42,16 @@ Package script:
 ```json
 {
   "scripts": {
-    "db:seed": "bun src/db/seed.ts"
+    "db:seed": "bun --env-file=.env.local src/lib/db/seed.ts"
   }
 }
+```
+
+Sprint G QA note:
+
+```txt
+Do not run db:seed against production data.
+Run it only after DATABASE_URL or DATABASE_URL_UNPOOLED is confirmed to point to a safe development Neon database.
 ```
 
 ---
@@ -124,6 +131,26 @@ marketing
    email: marketing@dekoria.local
    role: marketing
 ```
+
+Important auth note:
+
+```txt
+These seeded users are app profiles used for relations, ownership, and dashboard data.
+They are not Better Auth credential accounts by themselves.
+Actual login accounts are created through the invite acceptance flow.
+```
+
+Bootstrap owner invite:
+
+```env
+BOOTSTRAP_OWNER_EMAIL=owner@example.com
+BOOTSTRAP_OWNER_NAME=Dekoria Owner
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+When `BOOTSTRAP_OWNER_EMAIL` is set, `bun run db:seed` creates a pending owner invite and prints the setup URL. Open that URL, set a password, then use `/login` for browser QA.
+
+If `BOOTSTRAP_OWNER_EMAIL` is not set, the script still seeds roles and operational sample data, but it skips owner invite creation.
 
 ---
 
