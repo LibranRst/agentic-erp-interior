@@ -5,6 +5,8 @@ import {
   eq,
   ilike,
   inArray,
+  isNotNull,
+  isNull,
   or,
   type SQL,
 } from "drizzle-orm";
@@ -28,9 +30,9 @@ export type MaterialIssueMetrics = Awaited<
   ReturnType<typeof getMaterialIssueMetrics>
 >;
 
-export async function getMaterialsQuery(filters: MaterialFilters = {}) {
+export async function getMaterialsQuery(filters: MaterialFilters = {}, includeArchived?: boolean) {
   const materials = await db.query.materials.findMany({
-    where: buildMaterialWhere(filters),
+    where: buildMaterialWhere(filters, includeArchived),
     with: {
       project: {
         columns: {
@@ -64,9 +66,9 @@ export async function getMaterialsQuery(filters: MaterialFilters = {}) {
   return attachMedia(materials);
 }
 
-export async function getMaterialIssuesQuery(limit = 6) {
+export async function getMaterialIssuesQuery(limit = 6, includeArchived?: boolean) {
   const materials = await db.query.materials.findMany({
-    where: buildMaterialIssueWhere(),
+    where: buildMaterialIssueWhere(includeArchived),
     with: {
       project: {
         columns: {
@@ -102,25 +104,29 @@ export async function getMaterialIssuesQuery(limit = 6) {
   return attachMedia(materials);
 }
 
-export async function getMaterialIssueMetrics() {
+export async function getMaterialIssueMetrics(includeArchived?: boolean) {
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.materials.archivedAt)
+    : isNull(schema.materials.archivedAt);
+  const issueWhere = buildMaterialIssueWhere(includeArchived);
   const [openIssues, delayed, high, critical, ready] = await Promise.all([
-    db.select({ value: count() }).from(schema.materials).where(buildMaterialIssueWhere()),
+    db.select({ value: count() }).from(schema.materials).where(issueWhere),
     db
       .select({ value: count() })
       .from(schema.materials)
-      .where(eq(schema.materials.status, "delayed")),
+      .where(and(archiveFilter, eq(schema.materials.status, "delayed"))),
     db
       .select({ value: count() })
       .from(schema.materials)
-      .where(eq(schema.materials.urgencyLevel, "high")),
+      .where(and(archiveFilter, eq(schema.materials.urgencyLevel, "high"))),
     db
       .select({ value: count() })
       .from(schema.materials)
-      .where(eq(schema.materials.urgencyLevel, "critical")),
+      .where(and(archiveFilter, eq(schema.materials.urgencyLevel, "critical"))),
     db
       .select({ value: count() })
       .from(schema.materials)
-      .where(inArray(schema.materials.status, ["arrived", "installed"])),
+      .where(and(archiveFilter, inArray(schema.materials.status, ["arrived", "installed"]))),
   ]);
 
   return {
@@ -159,8 +165,14 @@ export async function getMaterialFormOptions() {
   };
 }
 
-function buildMaterialWhere(filters: MaterialFilters) {
+function buildMaterialWhere(filters: MaterialFilters, includeArchived?: boolean) {
   const conditions: SQL[] = [];
+
+  if (includeArchived) {
+    conditions.push(isNotNull(schema.materials.archivedAt));
+  } else {
+    conditions.push(isNull(schema.materials.archivedAt));
+  }
 
   if (filters.search) {
     const searchValue = `%${filters.search}%`;
@@ -194,12 +206,18 @@ function buildMaterialWhere(filters: MaterialFilters) {
   return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
-function buildMaterialIssueWhere() {
-  return or(
-    inArray(schema.materials.status, [...MATERIAL_ISSUE_STATUSES]),
-    inArray(schema.materials.urgencyLevel, [
-      ...MATERIAL_WARNING_URGENCY_LEVELS,
-    ]),
+function buildMaterialIssueWhere(includeArchived?: boolean) {
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.materials.archivedAt)
+    : isNull(schema.materials.archivedAt);
+  return and(
+    archiveFilter,
+    or(
+      inArray(schema.materials.status, [...MATERIAL_ISSUE_STATUSES]),
+      inArray(schema.materials.urgencyLevel, [
+        ...MATERIAL_WARNING_URGENCY_LEVELS,
+      ]),
+    ),
   );
 }
 

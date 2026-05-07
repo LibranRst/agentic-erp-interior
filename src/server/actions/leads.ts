@@ -30,14 +30,14 @@ import { getZodFieldErrors } from "@/src/lib/forms";
 
 const leadIdSchema = z.uuid("Lead id is invalid.");
 
-export async function getLeads(filters: unknown = {}) {
+export async function getLeads(filters: unknown = {}, includeArchived?: boolean) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "lead:view");
   requireRole(currentUser, ["owner", "admin", "sales"]);
 
   const parsed = leadFiltersSchema.safeParse(filters);
 
-  return getLeadsQuery(parsed.success ? parsed.data : {}, currentUser);
+  return getLeadsQuery(parsed.success ? parsed.data : {}, currentUser, includeArchived);
 }
 
 export async function getSalesSnapshot() {
@@ -353,6 +353,86 @@ function revalidateLeadPaths(projectId?: string | null) {
   if (projectId) {
     revalidatePath(`/projects/${projectId}`);
   }
+}
+
+export async function archiveLeadAction(leadId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "lead:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedLeadId = leadIdSchema.safeParse(leadId);
+
+  if (!parsedLeadId.success) {
+    return { status: "error", message: "Lead id is invalid." };
+  }
+
+  const [lead] = await db
+    .update(schema.leads)
+    .set({ archivedAt: new Date(), archivedBy: currentUser.id })
+    .where(eq(schema.leads.id, parsedLeadId.data))
+    .returning({ id: schema.leads.id });
+
+  if (!lead) {
+    return { status: "error", message: "Lead was not found." };
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Lead archived." };
+}
+
+export async function restoreLeadAction(leadId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "lead:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedLeadId = leadIdSchema.safeParse(leadId);
+
+  if (!parsedLeadId.success) {
+    return { status: "error", message: "Lead id is invalid." };
+  }
+
+  const [lead] = await db
+    .update(schema.leads)
+    .set({ archivedAt: null, archivedBy: null })
+    .where(eq(schema.leads.id, parsedLeadId.data))
+    .returning({ id: schema.leads.id });
+
+  if (!lead) {
+    return { status: "error", message: "Lead was not found." };
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Lead restored." };
+}
+
+export async function deleteLeadAction(leadId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "lead:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedLeadId = leadIdSchema.safeParse(leadId);
+
+  if (!parsedLeadId.success) {
+    return { status: "error", message: "Lead id is invalid." };
+  }
+
+  const [lead] = await db
+    .delete(schema.leads)
+    .where(eq(schema.leads.id, parsedLeadId.data))
+    .returning({ id: schema.leads.id });
+
+  if (!lead) {
+    return { status: "error", message: "Lead was not found." };
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Lead deleted." };
 }
 
 function getZodMessage(error: z.ZodError) {

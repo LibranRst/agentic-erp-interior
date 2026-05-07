@@ -1,5 +1,6 @@
 import {
   AiGenerativeIcon,
+  Archive02Icon,
   Calendar03Icon,
   DashboardSquare01Icon,
   DeliveryTruck02Icon,
@@ -93,6 +94,13 @@ export const appNavItems = [
     allowedRoles: ownerAdminRoles,
   },
   {
+    title: "Archived",
+    href: "/archived",
+    icon: Archive02Icon,
+    description: "Restore or delete archived records",
+    allowedRoles: ownerAdminRoles,
+  },
+  {
     title: "Media",
     href: "/media",
     icon: Image02Icon,
@@ -115,8 +123,8 @@ export const appNavItems = [
   },
 ] as const
 
-export const operationsNavItems = appNavItems.slice(0, 9)
-export const adminNavItems = appNavItems.slice(9)
+export const operationsNavItems = appNavItems.slice(0, 10)
+export const adminNavItems = appNavItems.slice(10)
 
 export const tableIcon = TableIcon
 

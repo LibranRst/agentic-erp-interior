@@ -28,14 +28,14 @@ import { getZodFieldErrors } from "@/src/lib/forms";
 
 const materialIdSchema = z.uuid("Material id is invalid.");
 
-export async function getMaterials(filters: unknown = {}) {
+export async function getMaterials(filters: unknown = {}, includeArchived?: boolean) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "material:view");
   requireRole(currentUser, ["owner", "admin", "purchasing"]);
 
   const parsed = materialFiltersSchema.safeParse(filters);
 
-  return getMaterialsQuery(parsed.success ? parsed.data : {});
+  return getMaterialsQuery(parsed.success ? parsed.data : {}, includeArchived);
 }
 
 export async function getMaterialIssues(limit = 6) {
@@ -361,6 +361,90 @@ function revalidateMaterialPaths(projectId: string) {
   revalidatePath("/materials");
   revalidatePath("/dashboard");
   revalidatePath(`/projects/${projectId}`);
+}
+
+export async function archiveMaterialAction(materialId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "material:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedMaterialId = materialIdSchema.safeParse(materialId);
+
+  if (!parsedMaterialId.success) {
+    return { status: "error", message: "Material id is invalid." };
+  }
+
+  const [material] = await db
+    .update(schema.materials)
+    .set({ archivedAt: new Date(), archivedBy: currentUser.id, updatedBy: currentUser.id })
+    .where(eq(schema.materials.id, parsedMaterialId.data))
+    .returning({
+      id: schema.materials.id,
+      projectId: schema.materials.projectId,
+    });
+
+  if (!material) {
+    return { status: "error", message: "Material issue was not found." };
+  }
+
+  revalidateMaterialPaths(material.projectId);
+
+  return { status: "success", message: "Material issue archived." };
+}
+
+export async function restoreMaterialAction(materialId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "material:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedMaterialId = materialIdSchema.safeParse(materialId);
+
+  if (!parsedMaterialId.success) {
+    return { status: "error", message: "Material id is invalid." };
+  }
+
+  const [material] = await db
+    .update(schema.materials)
+    .set({ archivedAt: null, archivedBy: null, updatedBy: currentUser.id })
+    .where(eq(schema.materials.id, parsedMaterialId.data))
+    .returning({
+      id: schema.materials.id,
+      projectId: schema.materials.projectId,
+    });
+
+  if (!material) {
+    return { status: "error", message: "Material issue was not found." };
+  }
+
+  revalidateMaterialPaths(material.projectId);
+
+  return { status: "success", message: "Material issue restored." };
+}
+
+export async function deleteMaterialAction(materialId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "material:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedMaterialId = materialIdSchema.safeParse(materialId);
+
+  if (!parsedMaterialId.success) {
+    return { status: "error", message: "Material id is invalid." };
+  }
+
+  const [material] = await db
+    .delete(schema.materials)
+    .where(eq(schema.materials.id, parsedMaterialId.data))
+    .returning({ id: schema.materials.id });
+
+  if (!material) {
+    return { status: "error", message: "Material issue was not found." };
+  }
+
+  revalidatePath("/materials");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Material issue deleted." };
 }
 
 function getZodMessage(error: z.ZodError) {

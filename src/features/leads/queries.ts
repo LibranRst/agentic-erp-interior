@@ -27,9 +27,10 @@ export type SalesSnapshot = Awaited<ReturnType<typeof getSalesSnapshotQuery>>;
 export async function getLeadsQuery(
   filters: LeadFilters = {},
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
   const leads = await db.query.leads.findMany({
-    where: buildLeadWhere(filters, currentUser),
+    where: buildLeadWhere(filters, currentUser, includeArchived),
     with: {
       assignedSales: {
         columns: {
@@ -59,9 +60,14 @@ export async function getLeadsQuery(
 export async function getDashboardLeadsQuery(
   limit = 5,
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.leads.archivedAt)
+    : isNull(schema.leads.archivedAt);
   const leads = await db.query.leads.findMany({
     where: and(
+      archiveFilter,
       buildRoleScope(currentUser),
       or(
         eq(schema.leads.status, "new"),
@@ -100,10 +106,14 @@ export async function getDashboardLeadsQuery(
   return attachMedia(leads);
 }
 
-export async function getSalesSnapshotQuery(currentUser?: CurrentUser) {
+export async function getSalesSnapshotQuery(currentUser?: CurrentUser, includeArchived?: boolean) {
   const today = getJakartaDate();
   const scope = buildRoleScope(currentUser);
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.leads.archivedAt)
+    : isNull(schema.leads.archivedAt);
   const followUpWhere = and(
+    archiveFilter,
     scope,
     inArray(schema.leads.status, [...OPEN_FOLLOW_UP_LEAD_STATUSES]),
     isNotNull(schema.leads.nextFollowUpDate),
@@ -115,16 +125,16 @@ export async function getSalesSnapshotQuery(currentUser?: CurrentUser) {
       db
         .select({ value: count() })
         .from(schema.leads)
-        .where(and(scope, eq(schema.leads.status, "new"))),
+        .where(and(archiveFilter, scope, eq(schema.leads.status, "new"))),
       db
         .select({ value: count() })
         .from(schema.leads)
-        .where(and(scope, eq(schema.leads.status, "hot"))),
+        .where(and(archiveFilter, scope, eq(schema.leads.status, "hot"))),
       db.select({ value: count() }).from(schema.leads).where(followUpWhere),
       db
         .select({ value: count() })
         .from(schema.leads)
-        .where(and(scope, eq(schema.leads.status, "converted"))),
+        .where(and(archiveFilter, scope, eq(schema.leads.status, "converted"))),
     ]);
 
   return {
@@ -135,7 +145,7 @@ export async function getSalesSnapshotQuery(currentUser?: CurrentUser) {
   };
 }
 
-export async function getLeadFormOptions(currentUser?: CurrentUser) {
+export async function getLeadFormOptions(currentUser?: CurrentUser, includeArchived?: boolean) {
   const salesUsers = await getActiveUsersByRoles(["sales", "owner", "admin"]);
   const scopedSalesUsers =
     currentUser?.role === "sales"
@@ -143,10 +153,13 @@ export async function getLeadFormOptions(currentUser?: CurrentUser) {
       : salesUsers;
 
   const sourceWhere = buildRoleScope(currentUser);
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.leads.archivedAt)
+    : isNull(schema.leads.archivedAt);
   const sourceRows = await db
     .selectDistinct({ source: schema.leads.source })
     .from(schema.leads)
-    .where(and(sourceWhere, isNotNull(schema.leads.source)))
+    .where(and(archiveFilter, sourceWhere, isNotNull(schema.leads.source)))
     .orderBy(asc(schema.leads.source));
 
   return {
@@ -157,8 +170,15 @@ export async function getLeadFormOptions(currentUser?: CurrentUser) {
   };
 }
 
-function buildLeadWhere(filters: LeadFilters, currentUser?: CurrentUser) {
+function buildLeadWhere(filters: LeadFilters, currentUser?: CurrentUser, includeArchived?: boolean) {
   const conditions: SQL[] = [];
+
+  if (includeArchived) {
+    conditions.push(isNotNull(schema.leads.archivedAt));
+  } else {
+    conditions.push(isNull(schema.leads.archivedAt));
+  }
+
   const scope = buildRoleScope(currentUser);
   const today = getJakartaDate();
 

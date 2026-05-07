@@ -28,7 +28,7 @@ import { getZodFieldErrors } from "@/src/lib/forms";
 
 const designTaskIdSchema = z.uuid("Design task id is invalid.");
 
-export async function getDesignTasks(filters: unknown = {}) {
+export async function getDesignTasks(filters: unknown = {}, includeArchived?: boolean) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "design_task:view");
   requireRole(currentUser, ["owner", "admin", "designer"]);
@@ -40,6 +40,7 @@ export async function getDesignTasks(filters: unknown = {}) {
     currentUser.role === "designer"
       ? { ...parsedFilters, designerId: currentUser.id }
       : parsedFilters,
+    includeArchived,
   );
 }
 
@@ -389,6 +390,94 @@ function revalidateDesignPaths(projectId: string) {
   revalidatePath("/design");
   revalidatePath("/dashboard");
   revalidatePath(`/projects/${projectId}`);
+}
+
+export async function archiveDesignTaskAction(designTaskId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "design_task:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedTaskId = designTaskIdSchema.safeParse(designTaskId);
+
+  if (!parsedTaskId.success) {
+    return { status: "error", message: "Design task id is invalid." };
+  }
+
+  const [task] = await db
+    .update(schema.designTasks)
+    .set({ archivedAt: new Date(), archivedBy: currentUser.id })
+    .where(eq(schema.designTasks.id, parsedTaskId.data))
+    .returning({
+      id: schema.designTasks.id,
+      projectId: schema.designTasks.projectId,
+    });
+
+  if (!task) {
+    return { status: "error", message: "Design task was not found." };
+  }
+
+  revalidatePath("/design");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${task.projectId}`);
+
+  return { status: "success", message: "Design task archived." };
+}
+
+export async function restoreDesignTaskAction(designTaskId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "design_task:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedTaskId = designTaskIdSchema.safeParse(designTaskId);
+
+  if (!parsedTaskId.success) {
+    return { status: "error", message: "Design task id is invalid." };
+  }
+
+  const [task] = await db
+    .update(schema.designTasks)
+    .set({ archivedAt: null, archivedBy: null })
+    .where(eq(schema.designTasks.id, parsedTaskId.data))
+    .returning({
+      id: schema.designTasks.id,
+      projectId: schema.designTasks.projectId,
+    });
+
+  if (!task) {
+    return { status: "error", message: "Design task was not found." };
+  }
+
+  revalidatePath("/design");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${task.projectId}`);
+
+  return { status: "success", message: "Design task restored." };
+}
+
+export async function deleteDesignTaskAction(designTaskId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "design_task:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedTaskId = designTaskIdSchema.safeParse(designTaskId);
+
+  if (!parsedTaskId.success) {
+    return { status: "error", message: "Design task id is invalid." };
+  }
+
+  const [task] = await db
+    .delete(schema.designTasks)
+    .where(eq(schema.designTasks.id, parsedTaskId.data))
+    .returning({ id: schema.designTasks.id });
+
+  if (!task) {
+    return { status: "error", message: "Design task was not found." };
+  }
+
+  revalidatePath("/design");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Design task deleted." };
 }
 
 function getZodMessage(error: z.ZodError) {

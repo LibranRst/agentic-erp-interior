@@ -35,7 +35,11 @@ import {
 } from "@/src/features/content/queries";
 import { contentAssetFiltersSchema } from "@/src/features/content/schemas";
 import { requirePageRole } from "@/src/lib/auth/permissions";
-import { getContentAssets } from "@/src/server/actions/content";
+import { getContentAssets, archiveContentAssetAction, restoreContentAssetAction, deleteContentAssetAction } from "@/src/server/actions/content";
+import { ArchivedToggle } from "@/components/shared/archived-toggle";
+import { RestoreButton } from "@/components/shared/restore-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { ArchiveButton } from "@/components/shared/archive-button";
 
 type ContentPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -47,6 +51,7 @@ export default async function ContentPage({
   await requirePageRole(["owner", "admin", "marketing"]);
 
   const params = await searchParams;
+  const showArchived = getParam(params.archived) === "true";
   const filters = {
     search: getParam(params.search),
     projectId: getParam(params.projectId),
@@ -57,8 +62,8 @@ export default async function ContentPage({
   const contentFilters = parsedFilters.success ? parsedFilters.data : {};
 
   const [assets, metrics, options] = await Promise.all([
-    getContentAssets(contentFilters),
-    getContentAssetMetrics(),
+    getContentAssets(contentFilters, showArchived),
+    getContentAssetMetrics(showArchived),
     getContentAssetFormOptions(),
   ]);
 
@@ -104,7 +109,10 @@ export default async function ContentPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
-          <ContentAssetFilters filters={contentFilters} options={options} />
+          <div className="flex flex-col gap-3">
+            <ContentAssetFilters filters={contentFilters} options={options} />
+            <ArchivedToggle />
+          </div>
 
           {assets.length > 0 ? (
             <DataTableShell>
@@ -197,11 +205,26 @@ export default async function ContentPage({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <ContentAssetDialog
-                          mode="edit"
-                          asset={asset}
-                          options={options}
-                        />
+                        {showArchived ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <RestoreButton action={restoreContentAssetAction.bind(null, asset.id)} />
+                            <DeleteConfirmationDialog
+                              entityLabel={asset.roomArea ?? asset.project.projectName}
+                              deleteAction={deleteContentAssetAction.bind(null, asset.id)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <ContentAssetDialog
+                              mode="edit"
+                              asset={asset}
+                              options={options}
+                            />
+                            <ArchiveButton
+                              action={archiveContentAssetAction.bind(null, asset.id)}
+                            />
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

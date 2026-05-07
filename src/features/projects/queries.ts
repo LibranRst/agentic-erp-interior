@@ -6,6 +6,8 @@ import {
   eq,
   ilike,
   inArray,
+  isNotNull,
+  isNull,
   or,
   type SQL,
 } from "drizzle-orm";
@@ -30,8 +32,8 @@ export type UrgentProjectOverviewItem = Awaited<
   ReturnType<typeof getUrgentProjectOverviewQuery>
 >[number];
 
-export async function getProjectsQuery(filters: ProjectFilters = {}) {
-  const where = buildProjectWhere(filters);
+export async function getProjectsQuery(filters: ProjectFilters = {}, includeArchived?: boolean) {
+  const where = buildProjectWhere(filters, includeArchived);
 
   return db.query.projects.findMany({
     where,
@@ -134,10 +136,13 @@ export async function getProjectByIdQuery(projectId: string) {
   };
 }
 
-export async function getProjectMetrics(currentUser?: CurrentUser) {
+export async function getProjectMetrics(currentUser?: CurrentUser, includeArchived?: boolean) {
   const scope = buildProjectRoleScope(currentUser);
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.projects.archivedAt)
+    : isNull(schema.projects.archivedAt);
 
-  const buildWhere = (condition: SQL) => (scope ? and(condition, scope) : condition);
+  const buildWhere = (condition: SQL) => (scope ? and(archiveFilter, condition, scope) : and(archiveFilter, condition));
 
   const [activeProjects, urgentProjects, designStageProjects, contentReadyProjects] =
     await Promise.all([
@@ -192,9 +197,16 @@ export async function getProjectMetrics(currentUser?: CurrentUser) {
 export async function getProjectHealthOverviewQuery(
   limit = 5,
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
   const scope = buildProjectRoleScope(currentUser);
-  const conditions: SQL[] = [inArray(schema.projects.status, activeProjectStatuses)];
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.projects.archivedAt)
+    : isNull(schema.projects.archivedAt);
+  const conditions: SQL[] = [
+    archiveFilter,
+    inArray(schema.projects.status, activeProjectStatuses),
+  ];
   if (scope) conditions.push(scope);
 
   return db.query.projects.findMany({
@@ -220,9 +232,14 @@ export async function getProjectHealthOverviewQuery(
 export async function getUrgentProjectOverviewQuery(
   limit = 5,
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
   const scope = buildProjectRoleScope(currentUser);
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.projects.archivedAt)
+    : isNull(schema.projects.archivedAt);
   const conditions: SQL[] = [
+    archiveFilter,
     inArray(schema.projects.healthStatus, [
       "urgent",
       "blocked",
@@ -263,8 +280,14 @@ export async function getProjectFormOptions() {
   };
 }
 
-function buildProjectWhere(filters: ProjectFilters) {
+function buildProjectWhere(filters: ProjectFilters, includeArchived?: boolean) {
   const conditions: SQL[] = [];
+
+  if (includeArchived) {
+    conditions.push(isNotNull(schema.projects.archivedAt));
+  } else {
+    conditions.push(isNull(schema.projects.archivedAt));
+  }
 
   if (filters.search) {
     const searchValue = `%${filters.search}%`;

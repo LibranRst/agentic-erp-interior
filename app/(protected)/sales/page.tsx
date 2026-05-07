@@ -34,7 +34,11 @@ import { leadFiltersSchema } from "@/src/features/leads/schemas";
 import { getProjectFormOptions } from "@/src/features/projects/queries";
 import { formatDate } from "@/src/features/projects/utils";
 import { requirePageRole } from "@/src/lib/auth/permissions";
-import { getLeads } from "@/src/server/actions/leads";
+import { getLeads, archiveLeadAction, restoreLeadAction, deleteLeadAction } from "@/src/server/actions/leads";
+import { ArchivedToggle } from "@/components/shared/archived-toggle";
+import { RestoreButton } from "@/components/shared/restore-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { ArchiveButton } from "@/components/shared/archive-button";
 
 type SalesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -43,6 +47,7 @@ type SalesPageProps = {
 export default async function SalesPage({ searchParams }: SalesPageProps) {
   const currentUser = await requirePageRole(["owner", "admin", "sales"]);
   const params = await searchParams;
+  const showArchived = getParam(params.archived) === "true";
   const filters = {
     search: getParam(params.search),
     status: getParam(params.status),
@@ -54,8 +59,8 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
   const leadFilters = parsedFilters.success ? parsedFilters.data : {};
 
   const [leads, metrics, options, projectOptions] = await Promise.all([
-    getLeads(leadFilters),
-    getSalesSnapshotQuery(currentUser),
+    getLeads(leadFilters, showArchived),
+    getSalesSnapshotQuery(currentUser, showArchived),
     getLeadFormOptions(currentUser),
     getProjectFormOptions(),
   ]);
@@ -103,7 +108,10 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
-          <LeadFilters filters={leadFilters} options={options} />
+          <div className="flex flex-col gap-3">
+            <LeadFilters filters={leadFilters} options={options} />
+            <ArchivedToggle />
+          </div>
 
           {leads.length > 0 ? (
             <DataTableShell>
@@ -182,15 +190,28 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <LeadDialog mode="edit" lead={lead} options={options} />
-                          {canConvert ? (
-                            <ConvertLeadDialog
-                              lead={lead}
-                              projectOptions={projectOptions}
+                        {showArchived ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <RestoreButton action={restoreLeadAction.bind(null, lead.id)} />
+                            <DeleteConfirmationDialog
+                              entityLabel={lead.leadName}
+                              deleteAction={deleteLeadAction.bind(null, lead.id)}
                             />
-                          ) : null}
-                        </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end gap-2">
+                            <LeadDialog mode="edit" lead={lead} options={options} />
+                            {canConvert ? (
+                              <ConvertLeadDialog
+                                lead={lead}
+                                projectOptions={projectOptions}
+                              />
+                            ) : null}
+                            <ArchiveButton
+                              action={archiveLeadAction.bind(null, lead.id)}
+                            />
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

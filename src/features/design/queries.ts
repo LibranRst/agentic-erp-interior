@@ -6,6 +6,8 @@ import {
   eq,
   ilike,
   inArray,
+  isNotNull,
+  isNull,
   or,
   type SQL,
 } from "drizzle-orm";
@@ -26,8 +28,8 @@ export type DesignTaskFormOptions = Awaited<
 >;
 export type DesignTaskMetrics = Awaited<ReturnType<typeof getDesignTaskMetrics>>;
 
-export async function getDesignTasksQuery(filters: DesignTaskFilters = {}) {
-  const where = buildDesignTaskWhere(filters);
+export async function getDesignTasksQuery(filters: DesignTaskFilters = {}, includeArchived?: boolean) {
+  const where = buildDesignTaskWhere(filters, includeArchived);
 
   const tasks = await db.query.designTasks.findMany({
     where,
@@ -59,8 +61,13 @@ export async function getDesignTasksQuery(filters: DesignTaskFilters = {}) {
 export async function getPendingDesignTasksQuery(
   limit = 6,
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.designTasks.archivedAt)
+    : isNull(schema.designTasks.archivedAt);
   const conditions: SQL[] = [
+    archiveFilter,
     inArray(schema.designTasks.status, [...PENDING_DESIGN_TASK_STATUSES]),
   ];
   const scope = buildDesignTaskRoleScope(currentUser);
@@ -96,9 +103,12 @@ export async function getPendingDesignTasksQuery(
   return attachMedia(tasks);
 }
 
-export async function getDesignTaskMetrics(currentUser?: CurrentUser) {
+export async function getDesignTaskMetrics(currentUser?: CurrentUser, includeArchived?: boolean) {
   const scope = buildDesignTaskRoleScope(currentUser);
-  const buildWhere = (condition: SQL) => (scope ? and(condition, scope) : condition);
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.designTasks.archivedAt)
+    : isNull(schema.designTasks.archivedAt);
+  const buildWhere = (condition: SQL) => (scope ? and(archiveFilter, condition, scope) : and(archiveFilter, condition));
 
   const [pending, waitingApproval, dedProgress, blocked] = await Promise.all([
     db
@@ -190,8 +200,14 @@ export async function getDesignMediaByTaskIds(taskIds: readonly string[]) {
   return mediaByTaskId;
 }
 
-function buildDesignTaskWhere(filters: DesignTaskFilters) {
+function buildDesignTaskWhere(filters: DesignTaskFilters, includeArchived?: boolean) {
   const conditions: SQL[] = [];
+
+  if (includeArchived) {
+    conditions.push(isNotNull(schema.designTasks.archivedAt));
+  } else {
+    conditions.push(isNull(schema.designTasks.archivedAt));
+  }
 
   if (filters.search) {
     const searchValue = `%${filters.search}%`;

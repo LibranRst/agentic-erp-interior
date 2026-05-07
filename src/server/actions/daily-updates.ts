@@ -28,14 +28,14 @@ import { getZodFieldErrors } from "@/src/lib/forms";
 
 const dailyUpdateIdSchema = z.uuid("Daily update id is invalid.");
 
-export async function getDailyUpdates(filters: unknown = {}) {
+export async function getDailyUpdates(filters: unknown = {}, includeArchived?: boolean) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "daily_update:view");
   requireRole(currentUser, ["owner", "admin", "project_manager"]);
 
   const parsed = dailyUpdateFiltersSchema.safeParse(filters);
 
-  return getDailyUpdatesQuery(parsed.success ? parsed.data : {}, currentUser);
+  return getDailyUpdatesQuery(parsed.success ? parsed.data : {}, currentUser, includeArchived);
 }
 
 export async function getLatestDailyUpdates(limit = 5) {
@@ -45,7 +45,7 @@ export async function getLatestDailyUpdates(limit = 5) {
   return getLatestDailyUpdatesQuery(limit, currentUser);
 }
 
-export async function getDailyUpdatePageData(filters: unknown = {}) {
+export async function getDailyUpdatePageData(filters: unknown = {}, includeArchived?: boolean) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "daily_update:view");
   requireRole(currentUser, ["owner", "admin", "project_manager"]);
@@ -54,8 +54,8 @@ export async function getDailyUpdatePageData(filters: unknown = {}) {
   const parsedFilters = parsed.success ? parsed.data : {};
 
   const [updates, metrics, options] = await Promise.all([
-    getDailyUpdatesQuery(parsedFilters, currentUser),
-    getDailyUpdateMetrics(currentUser),
+    getDailyUpdatesQuery(parsedFilters, currentUser, includeArchived),
+    getDailyUpdateMetrics(currentUser, includeArchived),
     getDailyUpdateFormOptions(currentUser),
   ]);
 
@@ -326,6 +326,90 @@ function revalidateDailyUpdatePaths(projectId: string) {
   revalidatePath("/daily-updates");
   revalidatePath("/dashboard");
   revalidatePath(`/projects/${projectId}`);
+}
+
+export async function archiveDailyUpdateAction(updateId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "daily_update:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = dailyUpdateIdSchema.safeParse(updateId);
+
+  if (!parsed.success) {
+    return { status: "error", message: "Daily update id is invalid." };
+  }
+
+  const [dailyUpdate] = await db
+    .update(schema.dailyUpdates)
+    .set({ archivedAt: new Date(), archivedBy: currentUser.id })
+    .where(eq(schema.dailyUpdates.id, parsed.data))
+    .returning({
+      id: schema.dailyUpdates.id,
+      projectId: schema.dailyUpdates.projectId,
+    });
+
+  if (!dailyUpdate) {
+    return { status: "error", message: "Daily update was not found." };
+  }
+
+  revalidateDailyUpdatePaths(dailyUpdate.projectId);
+
+  return { status: "success", message: "Daily update archived." };
+}
+
+export async function restoreDailyUpdateAction(updateId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "daily_update:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = dailyUpdateIdSchema.safeParse(updateId);
+
+  if (!parsed.success) {
+    return { status: "error", message: "Daily update id is invalid." };
+  }
+
+  const [dailyUpdate] = await db
+    .update(schema.dailyUpdates)
+    .set({ archivedAt: null, archivedBy: null })
+    .where(eq(schema.dailyUpdates.id, parsed.data))
+    .returning({
+      id: schema.dailyUpdates.id,
+      projectId: schema.dailyUpdates.projectId,
+    });
+
+  if (!dailyUpdate) {
+    return { status: "error", message: "Daily update was not found." };
+  }
+
+  revalidateDailyUpdatePaths(dailyUpdate.projectId);
+
+  return { status: "success", message: "Daily update restored." };
+}
+
+export async function deleteDailyUpdateAction(updateId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "daily_update:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = dailyUpdateIdSchema.safeParse(updateId);
+
+  if (!parsed.success) {
+    return { status: "error", message: "Daily update id is invalid." };
+  }
+
+  const [dailyUpdate] = await db
+    .delete(schema.dailyUpdates)
+    .where(eq(schema.dailyUpdates.id, parsed.data))
+    .returning({ id: schema.dailyUpdates.id });
+
+  if (!dailyUpdate) {
+    return { status: "error", message: "Daily update was not found." };
+  }
+
+  revalidatePath("/daily-updates");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Daily update deleted." };
 }
 
 function getZodMessage(error: z.ZodError) {

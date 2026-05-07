@@ -383,6 +383,8 @@ export const projects = pgTable(
     contentReadyStatus: contentStatusEnum("content_ready_status")
       .default("not_ready")
       .notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: uuid("archived_by").references(() => users.id),
     ...timestamps,
   },
   (table) => [
@@ -428,6 +430,8 @@ export const dailyUpdates = pgTable(
     nextAction: text("next_action"),
     progressPercentage: integer("progress_percentage"),
     healthStatus: healthStatusEnum("health_status"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: uuid("archived_by").references(() => users.id),
     ...timestamps,
   },
   (table) => [
@@ -455,6 +459,8 @@ export const designTasks = pgTable(
     revisionCount: integer("revision_count").default(0).notNull(),
     dueDate: date("due_date"),
     notes: text("notes"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: uuid("archived_by").references(() => users.id),
     ...timestamps,
   },
   (table) => [
@@ -489,6 +495,8 @@ export const materials = pgTable(
     etaDate: date("eta_date"),
     issueNotes: text("issue_notes"),
     updatedBy: uuid("updated_by").references(() => users.id),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: uuid("archived_by").references(() => users.id),
     ...timestamps,
   },
   (table) => [
@@ -517,6 +525,8 @@ export const leads = pgTable(
     convertedProjectId: uuid("converted_project_id").references(
       () => projects.id,
     ),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: uuid("archived_by").references(() => users.id),
     ...timestamps,
   },
   (table) => [index("leads_status_idx").on(table.status)],
@@ -540,6 +550,8 @@ export const contentAssets = pgTable(
     assignedTo: uuid("assigned_to").references(() => users.id),
     publishUrl: text("publish_url"),
     notes: text("notes"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: uuid("archived_by").references(() => users.id),
     ...timestamps,
   },
   (table) => [

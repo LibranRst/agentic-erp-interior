@@ -28,13 +28,13 @@ import { getZodFieldErrors } from "@/src/lib/forms";
 
 const projectIdSchema = z.uuid("Project id is invalid.");
 
-export async function getProjects(filters: unknown = {}) {
+export async function getProjects(filters: unknown = {}, includeArchived?: boolean) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "project:view");
 
   const parsed = projectFiltersSchema.safeParse(filters);
 
-  return getProjectsQuery(parsed.success ? parsed.data : {});
+  return getProjectsQuery(parsed.success ? parsed.data : {}, includeArchived);
 }
 
 export async function getProjectById(projectId: string) {
@@ -266,6 +266,86 @@ async function updateLimitedProjectFields(
     status: "success",
     message: "Project updated.",
   };
+}
+
+export async function archiveProjectAction(projectId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "project:archive");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedProjectId = projectIdSchema.safeParse(projectId);
+
+  if (!parsedProjectId.success) {
+    return { status: "error", message: "Project id is invalid." };
+  }
+
+  const [project] = await db
+    .update(schema.projects)
+    .set({ archivedAt: new Date(), archivedBy: currentUser.id })
+    .where(eq(schema.projects.id, parsedProjectId.data))
+    .returning({ id: schema.projects.id });
+
+  if (!project) {
+    return { status: "error", message: "Project was not found." };
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Project archived." };
+}
+
+export async function restoreProjectAction(projectId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "project:archive");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedProjectId = projectIdSchema.safeParse(projectId);
+
+  if (!parsedProjectId.success) {
+    return { status: "error", message: "Project id is invalid." };
+  }
+
+  const [project] = await db
+    .update(schema.projects)
+    .set({ archivedAt: null, archivedBy: null })
+    .where(eq(schema.projects.id, parsedProjectId.data))
+    .returning({ id: schema.projects.id });
+
+  if (!project) {
+    return { status: "error", message: "Project was not found." };
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Project restored." };
+}
+
+export async function deleteProjectAction(projectId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "project:archive");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedProjectId = projectIdSchema.safeParse(projectId);
+
+  if (!parsedProjectId.success) {
+    return { status: "error", message: "Project id is invalid." };
+  }
+
+  const [project] = await db
+    .delete(schema.projects)
+    .where(eq(schema.projects.id, parsedProjectId.data))
+    .returning({ id: schema.projects.id });
+
+  if (!project) {
+    return { status: "error", message: "Project was not found." };
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Project deleted." };
 }
 
 function getZodMessage(error: z.ZodError) {

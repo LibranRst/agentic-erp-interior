@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ArchivedToggle } from "@/components/shared/archived-toggle";
 import { DailyUpdateDialog } from "@/src/features/daily-updates/components/daily-update-dialog";
 import { DailyUpdateFilters } from "@/src/features/daily-updates/components/daily-update-filters";
 import { DailyUpdateTable } from "@/src/features/daily-updates/components/daily-update-table";
@@ -20,11 +21,12 @@ export default async function DailyUpdatesPage({
   searchParams,
 }: DailyUpdatesPageProps) {
   const params = await searchParams;
+  const showArchived = getParam(params.archived) === "true";
   const data = await getDailyUpdatePageData({
     projectId: getParam(params.projectId),
     healthStatus: getParam(params.healthStatus),
     updateDate: getParam(params.updateDate),
-  });
+  }, showArchived);
 
   return (
     <PageContainer className="overflow-x-hidden">
@@ -66,8 +68,11 @@ export default async function DailyUpdatesPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
-          <DailyUpdateFilters filters={data.filters} options={data.options} />
-          <DailyUpdateTable updates={data.updates} formOptions={data.options} />
+          <div className="flex flex-col gap-3">
+            <DailyUpdateFilters filters={data.filters} options={data.options} />
+            <ArchivedToggle />
+          </div>
+          <DailyUpdateTable updates={data.updates} formOptions={data.options} showArchived={showArchived} />
         </CardContent>
       </Card>
     </PageContainer>

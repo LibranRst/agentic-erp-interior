@@ -32,14 +32,14 @@ import { getZodFieldErrors } from "@/src/lib/forms";
 
 const contentAssetIdSchema = z.uuid("Content asset id is invalid.");
 
-export async function getContentAssets(filters: unknown = {}) {
+export async function getContentAssets(filters: unknown = {}, includeArchived?: boolean) {
   const currentUser = await requireUser();
   requirePermission(currentUser, "content_asset:view");
   requireRole(currentUser, ["owner", "admin", "marketing"]);
 
   const parsed = contentAssetFiltersSchema.safeParse(filters);
 
-  return getContentAssetsQuery(parsed.success ? parsed.data : {});
+  return getContentAssetsQuery(parsed.success ? parsed.data : {}, includeArchived);
 }
 
 export async function getContentReadyProjects(limit = 6) {
@@ -397,6 +397,92 @@ function revalidateContentPaths(projectId: string) {
   revalidatePath("/content");
   revalidatePath("/dashboard");
   revalidatePath(`/projects/${projectId}`);
+}
+
+export async function archiveContentAssetAction(contentAssetId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "content_asset:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedAssetId = contentAssetIdSchema.safeParse(contentAssetId);
+
+  if (!parsedAssetId.success) {
+    return { status: "error", message: "Content asset id is invalid." };
+  }
+
+  const [asset] = await db
+    .update(schema.contentAssets)
+    .set({ archivedAt: new Date(), archivedBy: currentUser.id, contentStatus: "archived", assignedTo: currentUser.id })
+    .where(eq(schema.contentAssets.id, parsedAssetId.data))
+    .returning({
+      id: schema.contentAssets.id,
+      projectId: schema.contentAssets.projectId,
+    });
+
+  if (!asset) {
+    return { status: "error", message: "Content asset was not found." };
+  }
+
+  await syncProjectContentReadyStatus(asset.projectId);
+  revalidateContentPaths(asset.projectId);
+
+  return { status: "success", message: "Content asset archived." };
+}
+
+export async function restoreContentAssetAction(contentAssetId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "content_asset:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedAssetId = contentAssetIdSchema.safeParse(contentAssetId);
+
+  if (!parsedAssetId.success) {
+    return { status: "error", message: "Content asset id is invalid." };
+  }
+
+  const [asset] = await db
+    .update(schema.contentAssets)
+    .set({ archivedAt: null, archivedBy: null, assignedTo: currentUser.id })
+    .where(eq(schema.contentAssets.id, parsedAssetId.data))
+    .returning({
+      id: schema.contentAssets.id,
+      projectId: schema.contentAssets.projectId,
+    });
+
+  if (!asset) {
+    return { status: "error", message: "Content asset was not found." };
+  }
+
+  await syncProjectContentReadyStatus(asset.projectId);
+  revalidateContentPaths(asset.projectId);
+
+  return { status: "success", message: "Content asset restored." };
+}
+
+export async function deleteContentAssetAction(contentAssetId: string) {
+  const currentUser = await requireUser();
+  requirePermission(currentUser, "content_asset:update");
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsedAssetId = contentAssetIdSchema.safeParse(contentAssetId);
+
+  if (!parsedAssetId.success) {
+    return { status: "error", message: "Content asset id is invalid." };
+  }
+
+  const [asset] = await db
+    .delete(schema.contentAssets)
+    .where(eq(schema.contentAssets.id, parsedAssetId.data))
+    .returning({ id: schema.contentAssets.id });
+
+  if (!asset) {
+    return { status: "error", message: "Content asset was not found." };
+  }
+
+  revalidatePath("/content");
+  revalidatePath("/dashboard");
+
+  return { status: "success", message: "Content asset deleted." };
 }
 
 function getZodMessage(error: z.ZodError) {

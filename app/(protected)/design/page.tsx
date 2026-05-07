@@ -35,7 +35,11 @@ import {
   getDesignTaskMetrics,
 } from "@/src/features/design/queries";
 import { designTaskFiltersSchema } from "@/src/features/design/schemas";
-import { getDesignTasks } from "@/src/server/actions/design";
+import { getDesignTasks, archiveDesignTaskAction, restoreDesignTaskAction, deleteDesignTaskAction } from "@/src/server/actions/design";
+import { ArchivedToggle } from "@/components/shared/archived-toggle";
+import { RestoreButton } from "@/components/shared/restore-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { ArchiveButton } from "@/components/shared/archive-button";
 import { requirePageRole } from "@/src/lib/auth/permissions";
 import { formatDate } from "@/src/features/projects/utils";
 
@@ -47,6 +51,7 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
   await requirePageRole(["owner", "admin", "designer"]);
 
   const params = await searchParams;
+  const showArchived = getParam(params.archived) === "true";
   const filters = {
     search: getParam(params.search),
     projectId: getParam(params.projectId),
@@ -59,8 +64,8 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
   const designFilters = parsedFilters.success ? parsedFilters.data : {};
 
   const [tasks, metrics, options] = await Promise.all([
-    getDesignTasks(designFilters),
-    getDesignTaskMetrics(),
+    getDesignTasks(designFilters, showArchived),
+    getDesignTaskMetrics(undefined, showArchived),
     getDesignTaskFormOptions(),
   ]);
 
@@ -104,7 +109,10 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
-          <DesignTaskFilters filters={designFilters} options={options} />
+          <div className="flex flex-col gap-3">
+            <DesignTaskFilters filters={designFilters} options={options} />
+            <ArchivedToggle />
+          </div>
 
           {tasks.length > 0 ? (
             <DataTableShell>
@@ -169,11 +177,26 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <DesignTaskDialog
-                          mode="edit"
-                          task={task}
-                          options={options}
-                        />
+                        {showArchived ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <RestoreButton action={restoreDesignTaskAction.bind(null, task.id)} />
+                            <DeleteConfirmationDialog
+                              entityLabel={task.taskName}
+                              deleteAction={deleteDesignTaskAction.bind(null, task.id)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <DesignTaskDialog
+                              mode="edit"
+                              task={task}
+                              options={options}
+                            />
+                            <ArchiveButton
+                              action={archiveDesignTaskAction.bind(null, task.id)}
+                            />
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

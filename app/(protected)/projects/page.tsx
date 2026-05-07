@@ -34,7 +34,11 @@ import {
   ProjectStatusBadge,
 } from "@/src/features/projects/components/project-badges";
 import { ProjectFilters } from "@/src/features/projects/components/project-filters";
-import { getProjects } from "@/src/server/actions/projects";
+import { getProjects, archiveProjectAction, restoreProjectAction, deleteProjectAction } from "@/src/server/actions/projects";
+import { ArchivedToggle } from "@/components/shared/archived-toggle";
+import { RestoreButton } from "@/components/shared/restore-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { ArchiveButton } from "@/components/shared/archive-button";
 import { formatDate, getDeadlineState } from "@/src/features/projects/utils";
 
 type ProjectsPageProps = {
@@ -45,6 +49,7 @@ export default async function ProjectsPage({
   searchParams,
 }: ProjectsPageProps) {
   const params = await searchParams;
+  const showArchived = getParam(params.archived) === "true";
   const filters = {
     search: getParam(params.search),
     status: getParam(params.status),
@@ -54,8 +59,8 @@ export default async function ProjectsPage({
   };
 
   const [projects, metrics, options] = await Promise.all([
-    getProjects(filters),
-    getProjectMetrics(),
+    getProjects(filters, showArchived),
+    getProjectMetrics(undefined, showArchived),
     getProjectFormOptions(),
   ]);
 
@@ -110,7 +115,10 @@ export default async function ProjectsPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
-          <ProjectFilters filters={filters} options={options} />
+          <div className="flex flex-col gap-3">
+            <ProjectFilters filters={filters} options={options} />
+            <ArchivedToggle />
+          </div>
 
           {projects.length > 0 ? (
             <DataTableShell>
@@ -186,16 +194,34 @@ export default async function ProjectsPage({
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/projects/${project.id}`}>
-                              <HugeiconsIcon
-                                icon={ViewIcon}
-                                strokeWidth={2}
-                                data-icon="inline-start"
+                          {showArchived ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <RestoreButton action={restoreProjectAction.bind(null, project.id)} />
+                              <DeleteConfirmationDialog
+                                entityLabel={project.projectName}
+                                deleteAction={deleteProjectAction.bind(null, project.id)}
                               />
-                              View
-                            </Link>
-                          </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-2">
+                              <Button variant="outline" size="sm" asChild>
+                                <Link href={`/projects/${project.id}`}>
+                                  <HugeiconsIcon
+                                    icon={ViewIcon}
+                                    strokeWidth={2}
+                                    data-icon="inline-start"
+                                  />
+                                  View
+                                </Link>
+                              </Button>
+                              <ArchiveButton
+                                action={archiveProjectAction.bind(
+                                  null,
+                                  project.id,
+                                )}
+                              />
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     );

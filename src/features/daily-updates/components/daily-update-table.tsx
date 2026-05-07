@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -19,7 +21,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ArchiveButton } from "@/components/shared/archive-button";
+import { RestoreButton } from "@/components/shared/restore-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { formatDate } from "@/src/features/projects/utils";
+import {
+  archiveDailyUpdateAction,
+  restoreDailyUpdateAction,
+  deleteDailyUpdateAction,
+} from "@/src/server/actions/daily-updates";
 
 import type { DailyUpdateFormOptions, DailyUpdateListItem } from "../queries";
 import { DailyUpdateHealthBadge } from "./daily-update-badges";
@@ -28,9 +38,11 @@ import { DailyUpdateDialog } from "./daily-update-dialog";
 export function DailyUpdateTable({
   updates,
   formOptions,
+  showArchived = false,
 }: {
   updates: DailyUpdateListItem[];
   formOptions?: DailyUpdateFormOptions;
+  showArchived?: boolean;
 }) {
   if (updates.length === 0) {
     return (
@@ -108,25 +120,36 @@ export function DailyUpdateTable({
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  {formOptions ? (
-                    <DailyUpdateDialog
-                      mode="edit"
-                      options={formOptions}
-                      update={update}
+                {showArchived ? (
+                  <div className="flex items-center justify-end gap-2">
+                    <RestoreButton action={restoreDailyUpdateAction.bind(null, update.id)} />
+                    <DeleteConfirmationDialog
+                      entityLabel={update.progressSummary.slice(0, 40)}
+                      deleteAction={deleteDailyUpdateAction.bind(null, update.id)}
                     />
-                  ) : null}
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/projects/${update.projectId}`}>
-                      Open
-                      <HugeiconsIcon
-                        icon={ArrowRight01Icon}
-                        strokeWidth={2}
-                        data-icon="inline-end"
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-end gap-2">
+                    {formOptions ? (
+                      <DailyUpdateDialog
+                        mode="edit"
+                        options={formOptions}
+                        update={update}
                       />
-                    </Link>
-                  </Button>
-                </div>
+                    ) : null}
+                    <ArchiveButton action={archiveDailyUpdateAction.bind(null, update.id)} />
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/projects/${update.projectId}`}>
+                        Open
+                        <HugeiconsIcon
+                          icon={ArrowRight01Icon}
+                          strokeWidth={2}
+                          data-icon="inline-end"
+                        />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           ))}

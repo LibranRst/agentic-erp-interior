@@ -6,6 +6,7 @@ import {
   eq,
   inArray,
   isNotNull,
+  isNull,
   or,
   sql,
   type SQL,
@@ -27,9 +28,10 @@ export type DailyUpdateMetrics = Awaited<ReturnType<typeof getDailyUpdateMetrics
 export async function getDailyUpdatesQuery(
   filters: DailyUpdateFilters = {},
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
   const updates = await db.query.dailyUpdates.findMany({
-    where: buildDailyUpdateWhere(filters, currentUser),
+    where: buildDailyUpdateWhere(filters, currentUser, includeArchived),
     with: {
       project: {
         columns: {
@@ -59,9 +61,10 @@ export async function getDailyUpdatesQuery(
 export async function getLatestDailyUpdatesQuery(
   limit = 5,
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
   const updates = await db.query.dailyUpdates.findMany({
-    where: buildDailyUpdateWhere({}, currentUser),
+    where: buildDailyUpdateWhere({}, currentUser, includeArchived),
     with: {
       project: {
         columns: {
@@ -89,11 +92,15 @@ export async function getLatestDailyUpdatesQuery(
   return attachMedia(updates);
 }
 
-export async function getDailyUpdateMetrics(currentUser?: CurrentUser) {
+export async function getDailyUpdateMetrics(currentUser?: CurrentUser, includeArchived?: boolean) {
   const today = new Date().toISOString().slice(0, 10);
   const scope = buildRoleScope(currentUser);
-  const todayWhere = and(eq(schema.dailyUpdates.updateDate, today), scope);
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.dailyUpdates.archivedAt)
+    : isNull(schema.dailyUpdates.archivedAt);
+  const todayWhere = and(archiveFilter, eq(schema.dailyUpdates.updateDate, today), scope);
   const issueWhere = and(
+    archiveFilter,
     or(
       isNotNull(schema.dailyUpdates.issueNotes),
       isNotNull(schema.dailyUpdates.blockerNotes),
@@ -127,7 +134,7 @@ export async function getDailyUpdateMetrics(currentUser?: CurrentUser) {
         .select({ value: count() })
         .from(schema.mediaAssets)
         .where(attachmentWhere),
-      db.select({ value: count() }).from(schema.dailyUpdates).where(scope),
+      db.select({ value: count() }).from(schema.dailyUpdates).where(and(archiveFilter, scope)),
     ]);
 
   return {
@@ -186,8 +193,16 @@ export async function getDailyUpdateMediaByUpdateIds(
 function buildDailyUpdateWhere(
   filters: DailyUpdateFilters,
   currentUser?: CurrentUser,
+  includeArchived?: boolean,
 ) {
   const conditions: SQL[] = [];
+
+  if (includeArchived) {
+    conditions.push(isNotNull(schema.dailyUpdates.archivedAt));
+  } else {
+    conditions.push(isNull(schema.dailyUpdates.archivedAt));
+  }
+
   const scope = buildRoleScope(currentUser);
 
   if (scope) {

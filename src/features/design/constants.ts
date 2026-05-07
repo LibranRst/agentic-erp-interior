@@ -36,7 +36,6 @@ export const PENDING_DESIGN_TASK_STATUSES = [
   "revision",
   "waiting_approval",
   "ded_progress",
-  "blocked",
 ] as const satisfies readonly DesignTaskStatus[];
 
 export type DesignType = (typeof DESIGN_TYPES)[number];

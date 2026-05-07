@@ -34,7 +34,11 @@ import {
 import { materialFiltersSchema } from "@/src/features/materials/schemas";
 import { formatDate } from "@/src/features/projects/utils";
 import { requirePageRole } from "@/src/lib/auth/permissions";
-import { getMaterials } from "@/src/server/actions/materials";
+import { getMaterials, archiveMaterialAction, restoreMaterialAction, deleteMaterialAction } from "@/src/server/actions/materials";
+import { ArchivedToggle } from "@/components/shared/archived-toggle";
+import { RestoreButton } from "@/components/shared/restore-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { ArchiveButton } from "@/components/shared/archive-button";
 
 type MaterialsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -46,6 +50,7 @@ export default async function MaterialsPage({
   await requirePageRole(["owner", "admin", "purchasing"]);
 
   const params = await searchParams;
+  const showArchived = getParam(params.archived) === "true";
   const filters = {
     search: getParam(params.search),
     projectId: getParam(params.projectId),
@@ -57,8 +62,8 @@ export default async function MaterialsPage({
   const materialFilters = parsedFilters.success ? parsedFilters.data : {};
 
   const [materials, metrics, options] = await Promise.all([
-    getMaterials(materialFilters),
-    getMaterialIssueMetrics(),
+    getMaterials(materialFilters, showArchived),
+    getMaterialIssueMetrics(showArchived),
     getMaterialFormOptions(),
   ]);
 
@@ -105,7 +110,10 @@ export default async function MaterialsPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
-          <MaterialFilters filters={materialFilters} options={options} />
+          <div className="flex flex-col gap-3">
+            <MaterialFilters filters={materialFilters} options={options} />
+            <ArchivedToggle />
+          </div>
 
           {materials.length > 0 ? (
             <DataTableShell>
@@ -177,11 +185,29 @@ export default async function MaterialsPage({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <MaterialDialog
-                          mode="edit"
-                          material={material}
-                          options={options}
-                        />
+                        {showArchived ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <RestoreButton action={restoreMaterialAction.bind(null, material.id)} />
+                            <DeleteConfirmationDialog
+                              entityLabel={material.materialName}
+                              deleteAction={deleteMaterialAction.bind(null, material.id)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <MaterialDialog
+                              mode="edit"
+                              material={material}
+                              options={options}
+                            />
+                            <ArchiveButton
+                              action={archiveMaterialAction.bind(
+                                null,
+                                material.id,
+                              )}
+                            />
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

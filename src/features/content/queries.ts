@@ -6,6 +6,8 @@ import {
   eq,
   ilike,
   inArray,
+  isNotNull,
+  isNull,
   or,
   type SQL,
 } from "drizzle-orm";
@@ -33,9 +35,10 @@ export type ContentReadyProject = Awaited<
 
 export async function getContentAssetsQuery(
   filters: ContentAssetFilters = {},
+  includeArchived?: boolean,
 ) {
   const assets = await db.query.contentAssets.findMany({
-    where: buildContentAssetWhere(filters),
+    where: buildContentAssetWhere(filters, includeArchived),
     with: {
       project: {
         columns: {
@@ -61,11 +64,17 @@ export async function getContentAssetsQuery(
   return attachMedia(assets);
 }
 
-export async function getContentReadyProjectsQuery(limit = 6) {
+export async function getContentReadyProjectsQuery(limit = 6, includeArchived?: boolean) {
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.contentAssets.archivedAt)
+    : isNull(schema.contentAssets.archivedAt);
   const assets = await db.query.contentAssets.findMany({
-    where: inArray(schema.contentAssets.contentStatus, [
-      ...CONTENT_READY_DASHBOARD_STATUSES,
-    ]),
+    where: and(
+      archiveFilter,
+      inArray(schema.contentAssets.contentStatus, [
+        ...CONTENT_READY_DASHBOARD_STATUSES,
+      ]),
+    ),
     with: {
       project: {
         columns: {
@@ -92,13 +101,13 @@ export async function getContentReadyProjectsQuery(limit = 6) {
   return attachMedia(assets);
 }
 
-export async function getContentAssetMetrics() {
+export async function getContentAssetMetrics(includeArchived?: boolean) {
   const [readyToShoot, footageAvailable, editing, published] =
     await Promise.all([
-      countByStatus("ready_to_shoot"),
-      countByStatus("footage_available"),
-      countByStatus("editing"),
-      countByStatus("published"),
+      countByStatus("ready_to_shoot", includeArchived),
+      countByStatus("footage_available", includeArchived),
+      countByStatus("editing", includeArchived),
+      countByStatus("published", includeArchived),
     ]);
 
   return {
@@ -162,8 +171,14 @@ export async function getContentMediaByAssetIds(assetIds: readonly string[]) {
   return mediaByAssetId;
 }
 
-function buildContentAssetWhere(filters: ContentAssetFilters) {
+function buildContentAssetWhere(filters: ContentAssetFilters, includeArchived?: boolean) {
   const conditions: SQL[] = [];
+
+  if (includeArchived) {
+    conditions.push(isNotNull(schema.contentAssets.archivedAt));
+  } else {
+    conditions.push(isNull(schema.contentAssets.archivedAt));
+  }
 
   if (filters.search) {
     const searchValue = `%${filters.search}%`;
@@ -198,11 +213,14 @@ function buildContentAssetWhere(filters: ContentAssetFilters) {
   return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
-async function countByStatus(status: ContentStatus) {
+async function countByStatus(status: ContentStatus, includeArchived?: boolean) {
+  const archiveFilter = includeArchived
+    ? isNotNull(schema.contentAssets.archivedAt)
+    : isNull(schema.contentAssets.archivedAt);
   const [row] = await db
     .select({ value: count() })
     .from(schema.contentAssets)
-    .where(eq(schema.contentAssets.contentStatus, status));
+    .where(and(archiveFilter, eq(schema.contentAssets.contentStatus, status)));
 
   return row?.value ?? 0;
 }
