@@ -4,7 +4,7 @@
 
 This repository uses an agentic coding framework with AGENTS.md and Skills to keep implementation consistent, scoped, and high quality.
 
-Codex is the primary AI coding agent. OpenCode is the fallback when Codex reaches usage limits.
+Codex is the primary AI coding agent. OpenCode is the fallback when Codex reaches usage limits. Claude Code is the additional fallback when both are unavailable.
 
 Agents should not be treated as one-shot code generators. They should work as docs-first coding agents that:
 - read product docs
@@ -41,6 +41,30 @@ Gemini CLI:
 - preferred for terminal-based coding assistance and complex multi-file planning
 - must follow AGENTS.md, GEMINI.md, and relevant skills
 - always uses Plan Mode by default in this repository
+
+### Claude Code
+
+Purpose:
+- additional fallback for when Codex and OpenCode are both unavailable
+- preferred for quick terminal-based coding sessions and targeted fixes
+- must follow CLAUDE.md (thin adapter) which defers to AGENTS.md
+- uses @ file mentions for context and slash commands for repeated workflows
+
+Claude-specific files:
+- `CLAUDE.md` — thin adapter, defers to AGENTS.md
+- `.claude/README.md` — Claude Code setup guide
+- `.claude/skills/*/SKILL.md` — mirrored project skills for Claude Code
+- `.claude/commands/*.md` — slash commands for repeated workflows
+
+Claude Code can reference skills via @ mentions:
+- `.claude/skills/` — mirrored copies of project skills (preferred for Claude Code)
+- `.agents/skills/` — canonical skill location (shared across all agents)
+
+Slash commands:
+- `/mvp-audit` — Run MVP readiness audit
+- `/fix-sprint` — Execute fix sprint checklist
+- `/final-validation` — Run final validation before release
+- `/staging-check` — Verify staging deployment readiness
 
 ## Official Skills
 
@@ -250,6 +274,86 @@ Constraints:
 - Stay within MVP boundaries.
 - No YOLO mode.
 - Use Plan Mode.
+```
+
+## Claude Code Usage
+
+### Installation
+
+Claude Code is installed via npm:
+
+```bash
+npm install -g @anthropic/claude-code
+```
+
+Or via the desktop app from claude.ai/code.
+
+### Configuration
+
+Claude Code reads:
+- `CLAUDE.md` — thin adapter that defers to AGENTS.md
+- `.claude/commands/*.md` — slash commands
+- `.claude/settings.local.json` — local permissions
+
+### Usage Patterns
+
+Claude Code excels at:
+- **Quick fixes:** Targeted edits and bug fixes in existing code.
+- **Fallback coding:** Implementation when Codex and OpenCode are unavailable.
+- **Review:** Code review and MVP audit using commands.
+- **Documentation:** Reading and updating docs.
+
+Start a session:
+
+```bash
+cd /Volumes/DekoriaSSD/App Projects/dekoria-erp-project
+claude
+```
+
+Then reference context with @:
+
+```
+@CLAUDE.md @AGENTS.md @docs/PRD.md @docs/FLOWS.md
+```
+
+Example prompt pattern for Claude Code:
+
+```text
+Read:
+- @CLAUDE.md
+- @AGENTS.md
+- @docs/PRD.md
+- @docs/FLOWS.md
+- @docs/<relevant technical doc>
+
+Use skills:
+- @.agents/skills/dekoria-project-architect/SKILL.md
+- @.agents/skills/<relevant-skill>/SKILL.md
+
+Use Plan mode first for large changes.
+
+Task:
+<clear small task>
+
+Constraints:
+- Follow AGENTS.md rules.
+- Do not expand beyond MVP.
+- Use Bun commands.
+- Run lint/typecheck/build if available.
+
+Return:
+- files changed
+- commands run
+- verification result
+- blockers
+```
+
+Slash commands are available for repeated workflows:
+
+```
+/mvp-audit    — Run MVP readiness audit
+/fix-sprint   — Execute fix sprint checklist
+/final-validation — Run final validation before release
 ```
 
 ## Bun Rules

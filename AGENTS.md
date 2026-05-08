@@ -4,10 +4,11 @@
 
 This repository is the MVP for SaaS Agentic Interior ERP for Dekoria Living, a premium interior design and contractor company.
 
-These are shared agent instructions for Codex and OpenCode:
+These are shared agent instructions for Codex, OpenCode, and Claude Code:
 - Codex is the primary AI coding agent for this repository.
 - OpenCode is the fallback AI coding agent when Codex reaches usage limits.
-- Both agents must follow this AGENTS.md, the docs in docs/, official skills, and local project skills.
+- Claude Code is the additional fallback agent when both Codex and OpenCode are unavailable.
+- All agents must follow this AGENTS.md, the docs in docs/, official skills, and local project skills.
 - Treat this repository as an agentic coding framework, not a Codex-only setup.
 
 The product is an internal operations system focused on:
@@ -123,7 +124,7 @@ Local custom skills are for Dekoria-specific rules, business context, MVP bounda
 
 ## Agent Compatibility
 
-Codex and OpenCode must both use the canonical local skills location:
+Codex, OpenCode, and Claude Code must all use the canonical local skills location:
 - .agents/skills/<skill-name>/SKILL.md
 
 Official skills currently expected:
@@ -145,6 +146,16 @@ OpenCode compatibility notes:
 - Use `@` file mentions to reference docs, for example `@AGENTS.md`, `@docs/PRD.md`, and `@docs/FLOWS.md`.
 - OpenCode can discover skills from `.agents/skills/<name>/SKILL.md`.
 - If OpenCode proposes new instructions, merge them carefully with this file instead of replacing the existing rules.
+
+Claude Code compatibility notes:
+- Run `claude` from the project root.
+- Read CLAUDE.md first, then AGENTS.md — CLAUDE.md is the thin adapter that defers here.
+- For large tasks, use Plan mode before writing code.
+- Use `@` file mentions to reference docs — e.g. `@AGENTS.md`, `@docs/PRD.md`, `@docs/FLOWS.md`.
+- Use skills by referencing them with `@` mentions: `.agents/skills/<name>/SKILL.md`.
+- Use slash commands for repeated workflows: `/mvp-audit`, `/fix-sprint`, `/final-validation`.
+- Claude Code does not auto-discover `.agents/skills/` — reference skills explicitly.
+- Verify with lint/typecheck/build when available.
 
 ## Development Rules
 

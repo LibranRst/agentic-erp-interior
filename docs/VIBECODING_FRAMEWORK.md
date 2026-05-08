@@ -4,7 +4,7 @@
 
 This project uses controlled vibe coding.
 
-The goal is not to let AI freely generate large random code. The goal is to use Codex or OpenCode as scoped implementation agents with:
+The goal is not to let AI freely generate large random code. The goal is to use Codex, OpenCode, or Claude Code as scoped implementation agents with:
 - clear docs
 - strict MVP boundaries
 - official skills
@@ -63,6 +63,8 @@ When using OpenCode, run `opencode` from the project root, use Plan mode before 
 
 When using Gemini CLI, activate relevant skills first and ensure it reads `GEMINI.md` (which imports `AGENTS.md`). Gemini CLI is best for the **Research** and **Strategy** phases of the development lifecycle.
 
+When using Claude Code, run `claude` from the project root, read `@CLAUDE.md` first (which defers to `@AGENTS.md`), use Plan mode for large changes, reference docs with `@` file mentions, and use slash commands for repeated workflows. Claude Code is best for **targeted fixes**, **fallback coding**, and **review sessions**.
+
 ## Gemini CLI Prompt Templates
 
 ### Multi-File Architectural Review
@@ -117,6 +119,108 @@ Constraints:
 - Must follow AGENTS.md.
 - Must stay within MVP.
 ```
+
+## Claude Code Prompt Templates
+
+### Targeted Fix Session
+
+```
+Read:
+- @CLAUDE.md
+- @AGENTS.md
+- @docs/PRD.md
+- @docs/FLOWS.md
+- @docs/<relevant technical doc>
+- @.agents/skills/dekoria-quality-review/SKILL.md
+
+Task:
+Fix <specific bug or gap> in <module>.
+
+Constraints:
+- Follow AGENTS.md rules.
+- Do not expand beyond MVP.
+- Use Bun commands.
+- Inspect existing code before editing.
+- Run lint/typecheck/build.
+
+Return:
+- files changed
+- commands run
+- verification result
+- blockers
+```
+
+### MVP Audit with Slash Command
+
+```
+/mvp-audit
+```
+
+Claude Code will read relevant docs, audit the codebase, and return a structured gap analysis.
+
+### Review Session
+
+```
+Read:
+- @CLAUDE.md
+- @AGENTS.md
+- @docs/PRD.md
+- @.agents/skills/dekoria-quality-review/SKILL.md
+
+Task:
+Review <module> for correctness, type safety, MVP scope, permission checks, and UI consistency.
+```
+
+## Claude Code Workflow
+
+For planning:
+
+Read:
+- CLAUDE.md
+- AGENTS.md
+- docs/PRD.md
+- docs/FLOWS.md
+- docs/MVP_SYSTEM_BLUEPRINT.md
+
+Use Plan mode.
+
+Task:
+Create a plan for the requested MVP task only.
+
+Constraints:
+- Do not edit files yet.
+- Do not expand beyond MVP.
+- Use Bun.
+- Follow existing code patterns.
+
+Return:
+- files likely affected
+- implementation steps
+- risks
+- verification commands
+
+For implementation:
+
+Implement the approved plan.
+
+Rules:
+- Follow CLAUDE.md and AGENTS.md.
+- Use `.claude/skills/` for project-specific guidance (mirrored from `.agents/skills/`).
+- Use Bun commands only.
+- Keep changes minimal.
+- Run lint/typecheck/build if available.
+
+Return:
+- files changed
+- commands run
+- verification result
+- blockers
+
+Available Claude slash commands:
+- `/mvp-audit` — MVP readiness audit
+- `/fix-sprint` — Execute fix sprint checklist
+- `/final-validation` — Final validation before release
+- `/staging-check` — Verify staging deployment readiness
 
 ## Bad Prompt Example
 
