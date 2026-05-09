@@ -55,6 +55,7 @@ export const dailyUpdateSchema = z.object({
   workCompleted: z.string().nullable(),
   issueNotes: z.string().nullable(),
   blockerNotes: z.string().nullable(),
+  needOwnerAttention: z.boolean(),
   nextAction: z.string().nullable(),
   progressPercentage: z.number().nullable(),
   healthStatus: z.string().nullable(),

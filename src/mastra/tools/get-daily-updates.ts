@@ -35,6 +35,7 @@ export async function getLatestDailyUpdates(input: {
       workCompleted: true,
       issueNotes: true,
       blockerNotes: true,
+      needOwnerAttention: true,
       nextAction: true,
       progressPercentage: true,
       healthStatus: true,
@@ -59,8 +60,21 @@ export async function getLatestDailyUpdates(input: {
   });
 
   return updates.map((update) => ({
-    ...update,
-    updateDate: toDateOnly(update.updateDate) ?? "",
+    id: update.id,
+    project: {
+      id: update.project.id,
+      projectName: update.project.projectName,
+      clientName: update.project.clientName,
+    },
     updater: update.updater ? { ...update.updater, role: null } : null,
+    updateDate: toDateOnly(update.updateDate) ?? "",
+    progressSummary: update.progressSummary,
+    workCompleted: update.workCompleted,
+    issueNotes: update.issueNotes,
+    blockerNotes: update.blockerNotes,
+    needOwnerAttention: update.needOwnerAttention ?? false,
+    nextAction: update.nextAction,
+    progressPercentage: update.progressPercentage,
+    healthStatus: update.healthStatus,
   }));
 }

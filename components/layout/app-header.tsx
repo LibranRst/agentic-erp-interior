@@ -31,7 +31,7 @@ import { authClient } from "@/lib/auth-client"
 import { appNavItems } from "@/lib/navigation"
 import type { CurrentUser } from "@/src/lib/auth/permissions"
 
-function AppHeader({ user }: { user: CurrentUser }) {
+function AppHeader({ user, notificationBell }: { user: CurrentUser; notificationBell?: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const currentPage = getCurrentPage(pathname)
@@ -86,9 +86,11 @@ function AppHeader({ user }: { user: CurrentUser }) {
       </Breadcrumb>
       <div className="ml-auto flex min-w-0 items-center gap-2">
         <ThemeToggle />
-        <Button variant="ghost" size="icon-sm" aria-label="Notifications">
-          <HugeiconsIcon icon={BellDotIcon} strokeWidth={2} />
-        </Button>
+        {notificationBell ?? (
+          <Button variant="ghost" size="icon-sm" aria-label="Notifications">
+            <HugeiconsIcon icon={BellDotIcon} strokeWidth={2} />
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

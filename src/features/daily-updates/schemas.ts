@@ -68,6 +68,10 @@ export const dailyUpdateMutationSchema = z.object({
   workCompleted: optionalText(1200),
   issueNotes: optionalText(1200),
   blockerNotes: optionalText(1200),
+  needOwnerAttention: z.preprocess(
+    (value) => (value === "true" ? true : value === "on" ? true : false),
+    z.boolean().default(false),
+  ),
   nextAction: optionalText(800),
   progressPercentage: optionalProgressPercentage,
   healthStatus: z.preprocess(
@@ -104,6 +108,7 @@ export function parseDailyUpdateFormData(formData: FormData) {
     workCompleted: formData.get("workCompleted"),
     issueNotes: formData.get("issueNotes"),
     blockerNotes: formData.get("blockerNotes"),
+    needOwnerAttention: formData.get("needOwnerAttention"),
     nextAction: formData.get("nextAction"),
     progressPercentage: formData.get("progressPercentage"),
     healthStatus: formData.get("healthStatus"),

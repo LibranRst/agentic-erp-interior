@@ -427,6 +427,7 @@ export const dailyUpdates = pgTable(
     workCompleted: text("work_completed"),
     issueNotes: text("issue_notes"),
     blockerNotes: text("blocker_notes"),
+    needOwnerAttention: boolean("need_owner_attention").default(false).notNull(),
     nextAction: text("next_action"),
     progressPercentage: integer("progress_percentage"),
     healthStatus: healthStatusEnum("health_status"),

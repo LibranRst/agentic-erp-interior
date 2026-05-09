@@ -8,6 +8,7 @@ import {
 import { generateOwnerMorningSummary } from "@/src/mastra/agents/owner-ops-agent";
 import { completeAiRun, startAiRun } from "@/src/mastra/persistence/ai-runs";
 import { saveMorningSummary } from "@/src/mastra/persistence/ai-summaries";
+import { insertCriticalNotifications } from "@/src/lib/notifications";
 import { getDashboardData } from "@/src/mastra/tools";
 import { requireOwnerAdminAiToolUser } from "@/src/mastra/tools/auth";
 import {
@@ -81,6 +82,9 @@ async function generateMorningSummary(
         requesterUserId: user.id,
       }),
     );
+
+    // Refresh notifications alongside summary generation
+    await insertCriticalNotifications().catch(() => {});
   } catch (dataError) {
     await completeAiRun({
       aiRunId: aiRun.id,

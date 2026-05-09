@@ -24,6 +24,8 @@ import {
 } from "@/src/lib/auth/permissions";
 import { db, schema } from "@/src/lib/db";
 import { createMediaAssets } from "@/src/features/media/server";
+import { updateProjectHealthScore } from "@/src/features/projects/health-score";
+import { insertCriticalNotifications } from "@/src/lib/notifications";
 import { getZodFieldErrors } from "@/src/lib/forms";
 
 const dailyUpdateIdSchema = z.uuid("Daily update id is invalid.");
@@ -138,6 +140,8 @@ export async function createDailyUpdateAction(
       dailyUpdateId: dailyUpdate.id,
       uploadedBy: currentUser.id,
     }),
+    updateProjectHealthScore(dailyUpdate.projectId),
+    insertCriticalNotifications(),
   ]);
 
   revalidateDailyUpdatePaths(dailyUpdate.projectId);
@@ -252,6 +256,8 @@ export async function updateDailyUpdateAction(
       dailyUpdateId: dailyUpdate.id,
       uploadedBy: currentUser.id,
     }),
+    updateProjectHealthScore(dailyUpdate.projectId),
+    insertCriticalNotifications(),
   ]);
 
   revalidateDailyUpdatePaths(dailyUpdate.projectId);
@@ -274,6 +280,7 @@ function toDailyUpdateValues(data: DailyUpdateMutationInput, updatedBy: string) 
     workCompleted: data.workCompleted ?? null,
     issueNotes: data.issueNotes ?? null,
     blockerNotes: data.blockerNotes ?? null,
+    needOwnerAttention: data.needOwnerAttention ?? false,
     nextAction: data.nextAction ?? null,
     progressPercentage: data.progressPercentage ?? null,
     healthStatus: data.healthStatus ?? null,
@@ -281,20 +288,13 @@ function toDailyUpdateValues(data: DailyUpdateMutationInput, updatedBy: string) 
 }
 
 async function updateProjectFromDailyUpdate(data: DailyUpdateMutationInput) {
-  if (data.progressPercentage === undefined && data.healthStatus === undefined) {
+  if (data.progressPercentage === undefined) {
     return;
   }
 
   await db
     .update(schema.projects)
-    .set({
-      ...(data.progressPercentage !== undefined
-        ? { progressPercentage: data.progressPercentage }
-        : {}),
-      ...(data.healthStatus !== undefined
-        ? { healthStatus: data.healthStatus }
-        : {}),
-    })
+    .set({ progressPercentage: data.progressPercentage })
     .where(eq(schema.projects.id, data.projectId));
 }
 

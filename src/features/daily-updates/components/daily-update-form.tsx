@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+
+import { Switch } from "@/components/ui/switch";
 
 import { getFieldErrors, hasFieldError } from "@/components/shared/form-errors";
 import { MediaUploader } from "@/components/shared/media-uploader";
@@ -63,6 +65,7 @@ export function DailyUpdateForm({
     workCompleted: string | null;
     issueNotes: string | null;
     blockerNotes: string | null;
+    needOwnerAttention?: boolean;
     nextAction: string | null;
     progressPercentage: number | null;
     healthStatus: string | null;
@@ -171,6 +174,41 @@ export function DailyUpdateForm({
               placeholder="Hambatan yang butuh follow-up"
               defaultValue={initialData?.blockerNotes ?? ""}
             />
+          </Field>
+          <Field className="md:col-span-2">
+            <div className="rounded-xl border p-5">
+              <div className="flex items-start gap-4">
+                <input
+                  type="hidden"
+                  name="needOwnerAttention"
+                  id="needOwnerAttention-hidden"
+                />
+                <Switch
+                  id="needOwnerAttention"
+                  size="default"
+                  className="mt-0.5"
+                  defaultChecked={initialData?.needOwnerAttention ?? false}
+                  onCheckedChange={(checked) => {
+                    const hiddenInput = document.getElementById(
+                      "needOwnerAttention-hidden",
+                    ) as HTMLInputElement | null;
+                    if (hiddenInput) hiddenInput.value = String(checked);
+                  }}
+                />
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="needOwnerAttention"
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    Need owner attention
+                  </label>
+                  <span className="text-sm text-muted-foreground">
+                    Tandai jika update ini butuh keputusan atau tindakan
+                    langsung dari owner.
+                  </span>
+                </div>
+              </div>
+            </div>
           </Field>
           <Field className="md:col-span-2">
             <FieldLabel htmlFor="nextAction">Next action</FieldLabel>
