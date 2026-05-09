@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FileAttachmentIcon } from "@hugeicons/core-free-icons";
+import {
+  Alert02Icon,
+  Calendar03Icon,
+  FileAttachmentIcon,
+  PaintBoardIcon,
+} from "@hugeicons/core-free-icons";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
 import {
@@ -40,7 +45,7 @@ import { ArchivedToggle } from "@/components/shared/archived-toggle";
 import { RestoreButton } from "@/components/shared/restore-button";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { ArchiveButton } from "@/components/shared/archive-button";
-import { requirePageRole } from "@/src/lib/auth/permissions";
+import { requirePageRole, getCurrentUser } from "@/src/lib/auth/permissions";
 import { formatDate } from "@/src/features/projects/utils";
 
 type DesignPageProps = {
@@ -48,7 +53,7 @@ type DesignPageProps = {
 };
 
 export default async function DesignPage({ searchParams }: DesignPageProps) {
-  await requirePageRole(["owner", "admin", "designer"]);
+  const currentUser = await requirePageRole(["owner", "admin", "designer"]);
 
   const params = await searchParams;
   const showArchived = getParam(params.archived) === "true";
@@ -63,41 +68,47 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
   const parsedFilters = designTaskFiltersSchema.safeParse(filters);
   const designFilters = parsedFilters.success ? parsedFilters.data : {};
 
+  const isOwnerOrAdmin = currentUser.role === "owner" || currentUser.role === "admin";
+
   const [tasks, metrics, options] = await Promise.all([
     getDesignTasks(designFilters, showArchived),
     getDesignTaskMetrics(undefined, showArchived),
-    getDesignTaskFormOptions(),
+    getDesignTaskFormOptions(currentUser),
   ]);
 
   return (
-    <PageContainer className="overflow-x-hidden">
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Design / DED Tracker"
         description="Monitor concepts, renders, revisions, approvals, DED delivery, and design file handoff."
-        action={<DesignTaskDialog mode="create" options={options} />}
+        action={<DesignTaskDialog mode="create" options={options} currentUserId={currentUser.id} currentUserRole={currentUser.role} />}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Pending Design"
+          label="Pending Design"
           value={metrics.pending.toString()}
-          description="Open render, revision, approval, or DED tasks"
+          badge="Open render, revision, approval, or DED tasks"
+          icon={PaintBoardIcon}
         />
         <MetricCard
-          title="Waiting Approval"
+          label="Waiting Approval"
           value={metrics.waitingApproval.toString()}
-          description="Client or owner review"
+          badge="Client or owner review"
+          icon={Calendar03Icon}
         />
         <MetricCard
-          title="DED Progress"
+          label="DED Progress"
           value={metrics.dedProgress.toString()}
-          description="Technical drawings in progress"
+          badge="Technical drawings in progress"
+          icon={PaintBoardIcon}
         />
         <MetricCard
-          title="Blocked"
+          label="Blocked"
           value={metrics.blocked.toString()}
-          description="Needs a decision or unblock"
-          badge={metrics.blocked > 0 ? "Urgent" : undefined}
+          badge={metrics.blocked > 0 ? "Urgent" : "Needs a decision or unblock"}
+          tone={metrics.blocked > 0 ? "danger" : "primary"}
+          icon={Alert02Icon}
         />
       </div>
 
@@ -110,8 +121,8 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
         </CardHeader>
         <CardContent className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-col gap-3">
-            <DesignTaskFilters filters={designFilters} options={options} />
-            <ArchivedToggle />
+            <DesignTaskFilters filters={designFilters} options={options} currentUserRole={currentUser.role} />
+            {isOwnerOrAdmin ? <ArchivedToggle /> : null}
           </div>
 
           {tasks.length > 0 ? (
@@ -177,26 +188,34 @@ export default async function DesignPage({ searchParams }: DesignPageProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {showArchived ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <RestoreButton action={restoreDesignTaskAction.bind(null, task.id)} />
-                            <DeleteConfirmationDialog
-                              entityLabel={task.taskName}
-                              deleteAction={deleteDesignTaskAction.bind(null, task.id)}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <DesignTaskDialog
-                              mode="edit"
-                              task={task}
-                              options={options}
-                            />
-                            <ArchiveButton
-                              action={archiveDesignTaskAction.bind(null, task.id)}
-                            />
-                          </div>
-                        )}
+                        {showArchived
+                          ? isOwnerOrAdmin ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <RestoreButton action={restoreDesignTaskAction.bind(null, task.id)} />
+                                <DeleteConfirmationDialog
+                                  entityLabel={task.taskName}
+                                  deleteAction={deleteDesignTaskAction.bind(null, task.id)}
+                                />
+                              </div>
+                            ) : null
+                          : (
+                            <div className="flex items-center justify-end gap-2">
+                              {(isOwnerOrAdmin || task.designer?.id === currentUser.id) ? (
+                                <DesignTaskDialog
+                                  mode="edit"
+                                  task={task}
+                                  options={options}
+                                  currentUserId={currentUser.id}
+                                  currentUserRole={currentUser.role}
+                                />
+                              ) : null}
+                              {isOwnerOrAdmin ? (
+                                <ArchiveButton
+                                  action={archiveDesignTaskAction.bind(null, task.id)}
+                                />
+                              ) : null}
+                            </div>
+                          )}
                       </TableCell>
                     </TableRow>
                   ))}

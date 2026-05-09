@@ -1,10 +1,11 @@
 import { db, schema } from "@/src/lib/db";
-import type { ErpDataBundle } from "@/src/mastra/tools/schemas";
+import type { ErpDataBundle, OwnerAiBrief } from "@/src/mastra/tools/schemas";
 
 export async function saveMorningSummary(input: {
   generatedForUserId: string;
   summaryDate: string;
   content: string;
+  structuredContent: OwnerAiBrief;
   sourceData: ErpDataBundle;
   aiRunId: string;
 }) {
@@ -15,6 +16,7 @@ export async function saveMorningSummary(input: {
       summaryDate: input.summaryDate,
       generatedForUserId: input.generatedForUserId,
       content: input.content,
+      structuredContent: input.structuredContent,
       sourceData: input.sourceData,
       aiRunId: input.aiRunId,
     })

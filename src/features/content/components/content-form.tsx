@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { UploadedMediaInput } from "@/src/features/media/schemas";
+import { DebugFillButton } from "@/components/shared/debug-fill-button";
 import {
   createContentAssetAction,
   updateContentAssetAction,
@@ -233,7 +234,8 @@ export function ContentAssetForm({
         </FieldGroup>
       </FieldSet>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
+        <DebugFillButton type="content" />
         <SubmitButton mode={mode} />
       </div>
     </form>

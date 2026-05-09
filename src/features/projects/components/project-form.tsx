@@ -42,6 +42,7 @@ import {
   projectPriorityLabels,
   projectStatusLabels,
 } from "../constants";
+import { DebugFillButton } from "@/components/shared/debug-fill-button";
 import type { ProjectActionState } from "../schemas";
 import { toDateInputValue } from "../utils";
 
@@ -326,7 +327,8 @@ export function ProjectForm({
         </FieldGroup>
       </FieldSet>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <DebugFillButton type="project" />
         <SubmitButton mode={mode} />
       </div>
     </form>

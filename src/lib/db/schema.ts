@@ -628,6 +628,7 @@ export const aiSummaries = pgTable(
       () => users.id,
     ),
     content: text("content").notNull(),
+    structuredContent: jsonb("structured_content"),
     sourceData: jsonb("source_data"),
     aiRunId: uuid("ai_run_id").references(() => aiRuns.id),
     createdAt: timestamp("created_at", { withTimezone: true })

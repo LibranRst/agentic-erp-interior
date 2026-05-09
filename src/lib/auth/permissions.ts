@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 
@@ -122,6 +122,10 @@ export type CurrentUser = {
   email: string;
   role: RoleName;
   avatarUrl?: string | null;
+  impersonatedBy?: {
+    id: string;
+    name: string;
+  };
 };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -145,7 +149,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return null;
   }
 
-  return {
+  const realUser: CurrentUser = {
     id: user.id,
     authUserId: session.user.id,
     name: user.name,
@@ -153,6 +157,36 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     role: user.role.name,
     avatarUrl: user.avatar?.imagekitUrl ?? null,
   };
+
+  // Impersonation: only owner/admin can switch to another user
+  if (realUser.role === "owner" || realUser.role === "admin") {
+    const cookieStore = await cookies();
+    const targetId = cookieStore.get("x-debug-user-id")?.value;
+
+    if (targetId && targetId !== realUser.id) {
+      const target = await db.query.users.findFirst({
+        where: eq(schema.users.id, targetId),
+        with: {
+          role: true,
+          avatar: true,
+        },
+      });
+
+      if (target && target.status === "active") {
+        return {
+          id: target.id,
+          authUserId: target.authUserId ?? "",
+          name: target.name,
+          email: target.email,
+          role: target.role.name,
+          avatarUrl: target.avatar?.imagekitUrl ?? null,
+          impersonatedBy: { id: realUser.id, name: realUser.name },
+        };
+      }
+    }
+  }
+
+  return realUser;
 }
 
 export async function requireUser() {

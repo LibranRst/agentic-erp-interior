@@ -333,9 +333,24 @@ export async function deleteProjectAction(projectId: string) {
     return { status: "error", message: "Project id is invalid." };
   }
 
+  const pid = parsedProjectId.data;
+
+  // Clear child rows in tables without ON DELETE CASCADE on projects FK
+  await db
+    .delete(schema.notifications)
+    .where(eq(schema.notifications.projectId, pid));
+  await db
+    .update(schema.mediaAssets)
+    .set({ projectId: null })
+    .where(eq(schema.mediaAssets.projectId, pid));
+  await db
+    .update(schema.leads)
+    .set({ convertedProjectId: null, status: "hot" })
+    .where(eq(schema.leads.convertedProjectId, pid));
+
   const [project] = await db
     .delete(schema.projects)
-    .where(eq(schema.projects.id, parsedProjectId.data))
+    .where(eq(schema.projects.id, pid))
     .returning({ id: schema.projects.id });
 
   if (!project) {

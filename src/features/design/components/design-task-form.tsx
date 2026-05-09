@@ -27,6 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { UploadedMediaInput } from "@/src/features/media/schemas";
 import { toDateInputValue } from "@/src/features/projects/utils";
+import { DebugFillButton } from "@/components/shared/debug-fill-button";
 import {
   createDesignTaskAction,
   updateDesignTaskAction,
@@ -77,10 +78,14 @@ export function DesignTaskForm({
   mode,
   options,
   task,
+  currentUserId,
+  currentUserRole,
 }: {
   mode: "create" | "edit";
   options: DesignTaskFormOptions;
   task?: DesignTaskFormValues;
+  currentUserId?: string;
+  currentUserRole?: string;
 }) {
   const action =
     mode === "edit" && task?.id
@@ -126,20 +131,32 @@ export function DesignTaskForm({
               label: `${project.projectName} · ${project.clientName}`,
             }))}
           />
-          <SelectField
-            name="designerId"
-            label="Designer"
-            fieldErrors={state.fieldErrors}
-            defaultValue={defaultDesignerId}
-            placeholder="Assign designer"
-            options={[
-              { value: "unassigned", label: "Unassigned" },
-              ...options.designers.map((designer) => ({
-                value: designer.id,
-                label: designer.name,
-              })),
-            ]}
-          />
+          {currentUserRole === "designer" ? (
+            <Field>
+              <FieldLabel>Designer</FieldLabel>
+              <Input
+                disabled
+                value={options.designers.find((d) => d.id === currentUserId)?.name ?? ""}
+                className="text-muted-foreground"
+              />
+              <input type="hidden" name="designerId" value={currentUserId ?? ""} />
+            </Field>
+          ) : (
+            <SelectField
+              name="designerId"
+              label="Designer"
+              fieldErrors={state.fieldErrors}
+              defaultValue={defaultDesignerId}
+              placeholder="Assign designer"
+              options={[
+                { value: "unassigned", label: "Unassigned" },
+                ...options.designers.map((designer) => ({
+                  value: designer.id,
+                  label: designer.name,
+                })),
+              ]}
+            />
+          )}
           <Field
             className="md:col-span-2"
             data-invalid={hasFieldError(state.fieldErrors, "taskName")}
@@ -238,7 +255,8 @@ export function DesignTaskForm({
         </FieldGroup>
       </FieldSet>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
+        <DebugFillButton type="design-task" />
         <SubmitButton mode={mode} />
       </div>
     </form>

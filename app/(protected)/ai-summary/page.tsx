@@ -1,3 +1,10 @@
+import {
+  AiGenerativeIcon,
+  Alert02Icon,
+  CheckmarkCircle02Icon,
+  Task01Icon,
+} from "@hugeicons/core-free-icons"
+
 import { PageContainer, PageHeader } from "@/components/layout/page-container"
 import {
   DataTableShell,
@@ -43,7 +50,7 @@ export default async function AiSummaryPage() {
   ).length
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <PageHeader
         title="AI Summary"
         description="Saved owner briefings generated through the Mastra OwnerOpsAgent workflow."
@@ -52,28 +59,33 @@ export default async function AiSummaryPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Saved Summaries"
+          label="Saved Summaries"
           value={summaryHistory.length.toString()}
-          description="Recent generated briefings"
+          badge="Recent generated briefings"
+          icon={Task01Icon}
         />
         <MetricCard
-          title="Successful Runs"
+          label="Successful Runs"
           value={successfulRuns.toString()}
-          description="Completed with primary or fallback model"
+          badge="Completed with primary or fallback model"
+          icon={CheckmarkCircle02Icon}
         />
         <MetricCard
-          title="Fallback Runs"
+          label="Fallback Runs"
           value={fallbackRuns.toString()}
-          description="Recovered with low reasoning fallback"
+          badge={fallbackRuns > 0 ? "Check" : "Recovered with low reasoning fallback"}
+          tone={fallbackRuns > 0 ? "warning" : "primary"}
+          icon={Alert02Icon}
         />
         <MetricCard
-          title="Latest Status"
+          label="Latest Status"
           value={latestSummary?.aiRun?.status ?? "None"}
-          description={
+          badge={
             latestSummary
               ? formatGeneratedAt(latestSummary.createdAt)
               : "No summary generated yet"
           }
+          icon={AiGenerativeIcon}
         />
       </div>
 

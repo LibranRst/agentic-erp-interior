@@ -48,7 +48,7 @@ export default async function SettingsPage() {
   const missingRequired = requiredStatuses.filter((item) => !item.isConfigured)
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Settings"
         description="Owner/admin environment status for the MVP runtime. Secrets are only shown as configured or missing."

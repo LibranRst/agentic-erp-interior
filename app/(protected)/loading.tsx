@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProtectedLoading() {
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
           <Skeleton className="h-7 w-56" />

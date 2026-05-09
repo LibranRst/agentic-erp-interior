@@ -1,4 +1,10 @@
 import Link from "next/link";
+import {
+  Alert02Icon,
+  Calendar03Icon,
+  CheckmarkCircle02Icon,
+  UserAdd01Icon,
+} from "@hugeicons/core-free-icons";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
 import {
@@ -65,9 +71,10 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     getProjectFormOptions(),
   ]);
   const canConvert = currentUser.role === "owner" || currentUser.role === "admin";
+  const isOwnerOrAdmin = canConvert;
 
   return (
-    <PageContainer className="overflow-x-hidden">
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Sales / Leads"
         description="Track new inquiries, hot prospects, follow-ups, assignment, and conversion into active projects."
@@ -76,26 +83,30 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="New Leads"
+          label="New Leads"
           value={metrics.new.toString()}
-          description="Fresh sales opportunities"
+          badge="Fresh sales opportunities"
+          icon={UserAdd01Icon}
         />
         <MetricCard
-          title="Hot Leads"
+          label="Hot Leads"
           value={metrics.hot.toString()}
-          description="High-intent leads marked for owner attention"
-          badge={metrics.hot > 0 ? "Prioritize" : undefined}
+          badge={metrics.hot > 0 ? "Prioritize" : "High-intent leads marked for owner attention"}
+          tone={metrics.hot > 0 ? "danger" : "primary"}
+          icon={Alert02Icon}
         />
         <MetricCard
-          title="Follow-up Due"
+          label="Follow-up Due"
           value={metrics.followUp.toString()}
-          description="Open leads due today or earlier"
-          badge={metrics.followUp > 0 ? "Today" : undefined}
+          badge={metrics.followUp > 0 ? "Today" : "Open leads due today or earlier"}
+          tone={metrics.followUp > 0 ? "warning" : "primary"}
+          icon={Calendar03Icon}
         />
         <MetricCard
-          title="Converted"
+          label="Converted"
           value={metrics.converted.toString()}
-          description="Leads linked to projects"
+          badge="Leads linked to projects"
+          icon={CheckmarkCircle02Icon}
         />
       </div>
 
@@ -110,7 +121,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
         <CardContent className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-col gap-3">
             <LeadFilters filters={leadFilters} options={options} />
-            <ArchivedToggle />
+            {isOwnerOrAdmin ? <ArchivedToggle /> : null}
           </div>
 
           {leads.length > 0 ? (
@@ -190,28 +201,34 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {showArchived ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <RestoreButton action={restoreLeadAction.bind(null, lead.id)} />
-                            <DeleteConfirmationDialog
-                              entityLabel={lead.leadName}
-                              deleteAction={deleteLeadAction.bind(null, lead.id)}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex justify-end gap-2">
-                            <LeadDialog mode="edit" lead={lead} options={options} />
-                            {canConvert ? (
-                              <ConvertLeadDialog
-                                lead={lead}
-                                projectOptions={projectOptions}
-                              />
-                            ) : null}
-                            <ArchiveButton
-                              action={archiveLeadAction.bind(null, lead.id)}
-                            />
-                          </div>
-                        )}
+                        {showArchived
+                          ? isOwnerOrAdmin ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <RestoreButton action={restoreLeadAction.bind(null, lead.id)} />
+                                <DeleteConfirmationDialog
+                                  entityLabel={lead.leadName}
+                                  deleteAction={deleteLeadAction.bind(null, lead.id)}
+                                />
+                              </div>
+                            ) : null
+                          : (
+                            <div className="flex justify-end gap-2">
+                              {(isOwnerOrAdmin || lead.assignedSales?.id === currentUser.id) ? (
+                                <LeadDialog mode="edit" lead={lead} options={options} />
+                              ) : null}
+                              {canConvert ? (
+                                <ConvertLeadDialog
+                                  lead={lead}
+                                  projectOptions={projectOptions}
+                                />
+                              ) : null}
+                              {isOwnerOrAdmin ? (
+                                <ArchiveButton
+                                  action={archiveLeadAction.bind(null, lead.id)}
+                                />
+                              ) : null}
+                            </div>
+                          )}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -1,10 +1,11 @@
 "use client"
 
-import { BellDotIcon } from "@hugeicons/core-free-icons"
+import { BellDotIcon, UserSwitchIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 
+import { stopImpersonationAction } from "@/src/server/actions/users"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Breadcrumb,
@@ -14,6 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -35,8 +37,38 @@ function AppHeader({ user }: { user: CurrentUser }) {
   const currentPage = getCurrentPage(pathname)
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur sm:px-6">
-      <SidebarTrigger />
+    <>
+      {user.impersonatedBy ? (
+        <div className="sticky top-0 z-20 border-b border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <HugeiconsIcon
+                icon={UserSwitchIcon}
+                strokeWidth={2}
+                className="size-4 shrink-0 text-amber-600 dark:text-amber-400"
+              />
+              <span className="text-sm text-amber-800 dark:text-amber-200 truncate">
+                Logged in as{" "}
+                <strong>{user.name}</strong> ({user.role}). Actions use this
+                user&apos;s permissions.
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-100 dark:hover:bg-amber-800"
+              onClick={async () => {
+                await stopImpersonationAction()
+                router.refresh()
+              }}
+            >
+              Exit impersonation
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur sm:px-6">
+        <SidebarTrigger />
       <Breadcrumb className="min-w-0 flex-1 overflow-hidden">
         <BreadcrumbList>
           <BreadcrumbItem className="hidden sm:inline-flex">
@@ -53,6 +85,7 @@ function AppHeader({ user }: { user: CurrentUser }) {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto flex min-w-0 items-center gap-2">
+        <ThemeToggle />
         <Button variant="ghost" size="icon-sm" aria-label="Notifications">
           <HugeiconsIcon icon={BellDotIcon} strokeWidth={2} />
         </Button>
@@ -94,6 +127,7 @@ function AppHeader({ user }: { user: CurrentUser }) {
         </DropdownMenu>
       </div>
     </header>
+    </>
   )
 }
 

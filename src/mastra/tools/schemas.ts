@@ -144,4 +144,60 @@ export const erpDataBundleSchema = z.object({
   missingData: z.array(z.string()),
 });
 
+const aiBriefAreaSchema = z
+  .enum(["project", "design", "material", "sales", "content", "operations"])
+  .catch("operations");
+
+const aiBriefSeveritySchema = z
+  .enum(["low", "medium", "high", "critical"])
+  .catch("medium");
+
+const aiBriefActionSchema = z.object({
+  label: z.string().min(1),
+  actionType: z.string().min(1),
+  targetId: z.string().nullable().optional(),
+});
+
+const aiBriefSignalSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  area: aiBriefAreaSchema,
+  severity: aiBriefSeveritySchema,
+  relatedEntityId: z.string().nullable().optional(),
+  relatedEntityName: z.string().nullable().optional(),
+  reason: z.string().min(1),
+  recommendedAction: z.string().min(1),
+  suggestedActions: z.array(aiBriefActionSchema).default([]),
+});
+
+const aiBriefDepartmentInsightSchema = z.object({
+  status: z
+    .enum(["healthy", "needs_attention", "critical", "not_enough_data"])
+    .catch("not_enough_data"),
+  summary: z.string().min(1),
+  signals: z.array(z.string()).default([]),
+});
+
+export const ownerAiBriefSchema = z.object({
+  overallStatus: z
+    .enum(["healthy", "needs_attention", "critical"])
+    .catch("needs_attention"),
+  generatedAt: z.string(),
+  executiveSummary: z.string().min(1),
+  priorities: z.array(aiBriefSignalSchema).max(5),
+  blockers: z.array(aiBriefSignalSchema).max(5),
+  risks: z.array(aiBriefSignalSchema).max(5),
+  opportunities: z.array(aiBriefSignalSchema).max(5),
+  recommendedOwnerAction: z.string().min(1),
+  departmentInsights: z.object({
+    projects: aiBriefDepartmentInsightSchema,
+    design: aiBriefDepartmentInsightSchema,
+    materials: aiBriefDepartmentInsightSchema,
+    sales: aiBriefDepartmentInsightSchema,
+    content: aiBriefDepartmentInsightSchema,
+  }),
+  fullReport: z.string().min(1),
+});
+
 export type ErpDataBundle = z.infer<typeof erpDataBundleSchema>;
+export type OwnerAiBrief = z.infer<typeof ownerAiBriefSchema>;

@@ -20,10 +20,14 @@ export function DesignTaskDialog({
   mode,
   options,
   task,
+  currentUserId,
+  currentUserRole,
 }: {
   mode: "create" | "edit";
   options: DesignTaskFormOptions;
   task?: DesignTaskListItem;
+  currentUserId?: string;
+  currentUserRole?: string;
 }) {
   const isCreate = mode === "create";
 
@@ -49,7 +53,7 @@ export function DesignTaskDialog({
             date, notes, and ImageKit-backed design files.
           </DialogDescription>
         </DialogHeader>
-        <DesignTaskForm mode={mode} task={task} options={options} />
+        <DesignTaskForm mode={mode} task={task} options={options} currentUserId={currentUserId} currentUserRole={currentUserRole} />
       </DialogContent>
     </Dialog>
   );

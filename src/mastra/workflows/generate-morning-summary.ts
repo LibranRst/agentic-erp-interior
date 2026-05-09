@@ -10,7 +10,10 @@ import { completeAiRun, startAiRun } from "@/src/mastra/persistence/ai-runs";
 import { saveMorningSummary } from "@/src/mastra/persistence/ai-summaries";
 import { getDashboardData } from "@/src/mastra/tools";
 import { requireOwnerAdminAiToolUser } from "@/src/mastra/tools/auth";
-import { erpDataBundleSchema } from "@/src/mastra/tools/schemas";
+import {
+  erpDataBundleSchema,
+  ownerAiBriefSchema,
+} from "@/src/mastra/tools/schemas";
 
 const workflowInputSchema = z.object({
   generatedByUserId: z.uuid(),
@@ -20,6 +23,7 @@ const workflowOutputSchema = z.object({
   summaryId: z.string(),
   aiRunId: z.string(),
   content: z.string(),
+  structuredContent: ownerAiBriefSchema,
   status: z.enum(["success", "fallback_success"]),
   modelName: z.string(),
   reasoningLevel: z.enum(["high", "low"]),
@@ -100,6 +104,7 @@ async function generateMorningSummary(
       generatedForUserId: user.id,
       summaryDate: sourceData.summaryDate,
       content: summary.content,
+      structuredContent: summary.structuredContent,
       sourceData,
       aiRunId: completedRun.id,
     });
@@ -108,6 +113,7 @@ async function generateMorningSummary(
       summaryId: savedSummary.id,
       aiRunId: completedRun.id,
       content: savedSummary.content,
+      structuredContent: summary.structuredContent,
       status: "success",
       modelName: completedRun.modelName,
       reasoningLevel: "high",
@@ -127,6 +133,7 @@ async function generateMorningSummary(
         generatedForUserId: user.id,
         summaryDate: sourceData.summaryDate,
         content: summary.content,
+        structuredContent: summary.structuredContent,
         sourceData,
         aiRunId: completedRun.id,
       });
@@ -135,6 +142,7 @@ async function generateMorningSummary(
         summaryId: savedSummary.id,
         aiRunId: completedRun.id,
         content: savedSummary.content,
+        structuredContent: summary.structuredContent,
         status: "fallback_success",
         modelName: completedRun.modelName,
         reasoningLevel: "low",

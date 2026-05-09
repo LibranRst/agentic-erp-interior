@@ -51,6 +51,7 @@ import {
   getDailyUpdateMediaByUpdateIds,
 } from "@/src/features/daily-updates/queries";
 import { ProjectEditDialog } from "@/src/features/projects/components/project-edit-dialog";
+import { ProjectPmControls } from "@/src/features/projects/components/project-pm-controls";
 import { getProjectFormOptions } from "@/src/features/projects/queries";
 import {
   formatCurrency,
@@ -94,15 +95,16 @@ export default async function ProjectDetailPage({
   const latestUpdate = project.dailyUpdates[0];
   const deadlineState = getDeadlineState(project.deadline);
   const canEdit = currentUser.role === "owner" || currentUser.role === "admin";
-  const canCreateDailyUpdate =
+  const canPmUpdate =
     canEdit ||
     (currentUser.role === "project_manager" && project.pmId === currentUser.id);
+  const canCreateDailyUpdate = canPmUpdate;
   const dailyUpdateOptions = canCreateDailyUpdate
     ? await getDailyUpdateFormOptions(currentUser)
     : null;
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <PageHeader
         title={project.projectName}
         description={`${project.clientName}${project.location ? ` · ${project.location}` : ""}`}
@@ -112,6 +114,20 @@ export default async function ProjectDetailPage({
           ) : undefined
         }
       />
+
+      {canPmUpdate ? (
+        <div className="mb-4 rounded-xl border p-4">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">
+            Quick Update
+          </div>
+          <ProjectPmControls
+            projectId={project.id}
+            status={project.status}
+            healthStatus={project.healthStatus}
+            progressPercentage={project.progressPercentage}
+          />
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -166,27 +182,27 @@ export default async function ProjectDetailPage({
           <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
             <div className="grid gap-4 md:grid-cols-2">
               <MetricCard
-                title="Daily Updates"
+                label="Daily Updates"
                 value={project.dailyUpdates.length.toString()}
-                description="Latest records shown"
+                badge="Latest records shown"
                 icon={Calendar03Icon}
               />
               <MetricCard
-                title="Design Tasks"
+                label="Design Tasks"
                 value={project.designTasks.length.toString()}
-                description="Open and completed design work"
+                badge="Open and completed design work"
                 icon={PaintBoardIcon}
               />
               <MetricCard
-                title="Materials"
+                label="Materials"
                 value={project.materials.length.toString()}
-                description="Tracked material items"
+                badge="Tracked material items"
                 icon={PackageIcon}
               />
               <MetricCard
-                title="Media"
+                label="Media"
                 value={project.mediaAssets.length.toString()}
-                description="ImageKit-backed assets"
+                badge="ImageKit-backed assets"
                 icon={FileImageIcon}
               />
             </div>

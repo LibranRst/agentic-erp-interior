@@ -143,7 +143,12 @@ export async function getDesignTaskMetrics(currentUser?: CurrentUser, includeArc
   };
 }
 
-export async function getDesignTaskFormOptions() {
+export async function getDesignTaskFormOptions(currentUser?: CurrentUser) {
+  const projectWhere =
+    currentUser?.role === "designer"
+      ? eq(schema.projects.designerId, currentUser.id)
+      : undefined;
+
   const [projects, designers] = await Promise.all([
     db.query.projects.findMany({
       columns: {
@@ -152,6 +157,7 @@ export async function getDesignTaskFormOptions() {
         clientName: true,
         designerId: true,
       },
+      where: projectWhere,
       orderBy: [asc(schema.projects.projectName)],
     }),
     getActiveUsersByRoles(["designer", "owner", "admin"]),

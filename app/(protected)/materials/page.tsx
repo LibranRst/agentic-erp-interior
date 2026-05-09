@@ -1,4 +1,9 @@
 import Link from "next/link";
+import {
+  Alert02Icon,
+  CheckmarkCircle02Icon,
+  DeliveryTruck02Icon,
+} from "@hugeicons/core-free-icons"
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
 import {
@@ -47,7 +52,8 @@ type MaterialsPageProps = {
 export default async function MaterialsPage({
   searchParams,
 }: MaterialsPageProps) {
-  await requirePageRole(["owner", "admin", "purchasing"]);
+  const currentUser = await requirePageRole(["owner", "admin", "purchasing"]);
+  const isOwnerOrAdmin = currentUser.role === "owner" || currentUser.role === "admin";
 
   const params = await searchParams;
   const showArchived = getParam(params.archived) === "true";
@@ -68,7 +74,7 @@ export default async function MaterialsPage({
   ]);
 
   return (
-    <PageContainer className="overflow-x-hidden">
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Material Issue Tracker"
         description="Track urgent materials, vendor ownership, ETA risks, delivery status, and project impact."
@@ -77,27 +83,31 @@ export default async function MaterialsPage({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Open Issues"
+          label="Open Issues"
           value={metrics.openIssues.toString()}
-          description="Delayed, problem, high, or critical materials"
-          badge={metrics.openIssues > 0 ? "Owner visible" : undefined}
+          badge={metrics.openIssues > 0 ? "Owner visible" : "Delayed, problem, high, or critical"}
+          tone={metrics.openIssues > 0 ? "danger" : "primary"}
+          icon={Alert02Icon}
         />
         <MetricCard
-          title="Delayed"
+          label="Delayed"
           value={metrics.delayed.toString()}
-          description="ETA or delivery risk"
-          badge={metrics.delayed > 0 ? "Follow up" : undefined}
+          badge={metrics.delayed > 0 ? "Follow up" : "ETA or delivery risk"}
+          tone={metrics.delayed > 0 ? "warning" : "primary"}
+          icon={DeliveryTruck02Icon}
         />
         <MetricCard
-          title="High / Critical"
+          label="High / Critical"
           value={(metrics.high + metrics.critical).toString()}
-          description={`${metrics.critical} critical issue${metrics.critical === 1 ? "" : "s"}`}
-          badge={metrics.critical > 0 ? "Critical" : undefined}
+          badge={metrics.critical > 0 ? "Critical" : `${metrics.critical} critical issue${metrics.critical === 1 ? "" : "s"}`}
+          tone={metrics.critical > 0 ? "danger" : "primary"}
+          icon={Alert02Icon}
         />
         <MetricCard
-          title="Ready"
+          label="Ready"
           value={metrics.ready.toString()}
-          description="Arrived or installed items"
+          badge="Arrived or installed items"
+          icon={CheckmarkCircle02Icon}
         />
       </div>
 
@@ -112,7 +122,7 @@ export default async function MaterialsPage({
         <CardContent className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-col gap-3">
             <MaterialFilters filters={materialFilters} options={options} />
-            <ArchivedToggle />
+            {isOwnerOrAdmin ? <ArchivedToggle /> : null}
           </div>
 
           {materials.length > 0 ? (
@@ -185,29 +195,35 @@ export default async function MaterialsPage({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {showArchived ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <RestoreButton action={restoreMaterialAction.bind(null, material.id)} />
-                            <DeleteConfirmationDialog
-                              entityLabel={material.materialName}
-                              deleteAction={deleteMaterialAction.bind(null, material.id)}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <MaterialDialog
-                              mode="edit"
-                              material={material}
-                              options={options}
-                            />
-                            <ArchiveButton
-                              action={archiveMaterialAction.bind(
-                                null,
-                                material.id,
-                              )}
-                            />
-                          </div>
-                        )}
+                        {showArchived
+                          ? isOwnerOrAdmin ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <RestoreButton action={restoreMaterialAction.bind(null, material.id)} />
+                                <DeleteConfirmationDialog
+                                  entityLabel={material.materialName}
+                                  deleteAction={deleteMaterialAction.bind(null, material.id)}
+                                />
+                              </div>
+                            ) : null
+                          : (
+                            <div className="flex items-center justify-end gap-2">
+                              {(isOwnerOrAdmin || material.updater?.id === currentUser.id) ? (
+                                <MaterialDialog
+                                  mode="edit"
+                                  material={material}
+                                  options={options}
+                                />
+                              ) : null}
+                              {isOwnerOrAdmin ? (
+                                <ArchiveButton
+                                  action={archiveMaterialAction.bind(
+                                    null,
+                                    material.id,
+                                  )}
+                                />
+                              ) : null}
+                            </div>
+                          )}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -1,4 +1,10 @@
 import Link from "next/link";
+import {
+  Camera01Icon,
+  CheckmarkCircle02Icon,
+  Image02Icon,
+  Video02Icon,
+} from "@hugeicons/core-free-icons";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
 import {
@@ -48,7 +54,8 @@ type ContentPageProps = {
 export default async function ContentPage({
   searchParams,
 }: ContentPageProps) {
-  await requirePageRole(["owner", "admin", "marketing"]);
+  const currentUser = await requirePageRole(["owner", "admin", "marketing"]);
+  const isOwnerOrAdmin = currentUser.role === "owner" || currentUser.role === "admin";
 
   const params = await searchParams;
   const showArchived = getParam(params.archived) === "true";
@@ -68,7 +75,7 @@ export default async function ContentPage({
   ]);
 
   return (
-    <PageContainer className="overflow-x-hidden">
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Content Readiness"
         description="Track project rooms, visual availability, footage, content angles, publishing state, and ImageKit media."
@@ -77,26 +84,30 @@ export default async function ContentPage({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Ready to Shoot"
+          label="Ready to Shoot"
           value={metrics.readyToShoot.toString()}
-          description="Shoot candidates queued for marketing"
-          badge={metrics.readyToShoot > 0 ? "Schedule" : undefined}
+          badge={metrics.readyToShoot > 0 ? "Schedule" : "Shoot candidates queued for marketing"}
+          tone={metrics.readyToShoot > 0 ? "success" : "primary"}
+          icon={Camera01Icon}
         />
         <MetricCard
-          title="Footage Available"
+          label="Footage Available"
           value={metrics.footageAvailable.toString()}
-          description="Raw media available for content"
-          badge={metrics.footageAvailable > 0 ? "Review" : undefined}
+          badge={metrics.footageAvailable > 0 ? "Review" : "Raw media available for content"}
+          tone={metrics.footageAvailable > 0 ? "warning" : "primary"}
+          icon={Video02Icon}
         />
         <MetricCard
-          title="Editing"
+          label="Editing"
           value={metrics.editing.toString()}
-          description="Assets currently in production"
+          badge="Assets currently in production"
+          icon={Image02Icon}
         />
         <MetricCard
-          title="Published"
+          label="Published"
           value={metrics.published.toString()}
-          description="Completed content records"
+          badge="Completed content records"
+          icon={CheckmarkCircle02Icon}
         />
       </div>
 
@@ -111,7 +122,7 @@ export default async function ContentPage({
         <CardContent className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-col gap-3">
             <ContentAssetFilters filters={contentFilters} options={options} />
-            <ArchivedToggle />
+            {isOwnerOrAdmin ? <ArchivedToggle /> : null}
           </div>
 
           {assets.length > 0 ? (
@@ -205,26 +216,32 @@ export default async function ContentPage({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {showArchived ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <RestoreButton action={restoreContentAssetAction.bind(null, asset.id)} />
-                            <DeleteConfirmationDialog
-                              entityLabel={asset.roomArea ?? asset.project.projectName}
-                              deleteAction={deleteContentAssetAction.bind(null, asset.id)}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <ContentAssetDialog
-                              mode="edit"
-                              asset={asset}
-                              options={options}
-                            />
-                            <ArchiveButton
-                              action={archiveContentAssetAction.bind(null, asset.id)}
-                            />
-                          </div>
-                        )}
+                        {showArchived
+                          ? isOwnerOrAdmin ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <RestoreButton action={restoreContentAssetAction.bind(null, asset.id)} />
+                                <DeleteConfirmationDialog
+                                  entityLabel={asset.roomArea ?? asset.project.projectName}
+                                  deleteAction={deleteContentAssetAction.bind(null, asset.id)}
+                                />
+                              </div>
+                            ) : null
+                          : (
+                            <div className="flex items-center justify-end gap-2">
+                              {(isOwnerOrAdmin || asset.assignee?.id === currentUser.id) ? (
+                                <ContentAssetDialog
+                                  mode="edit"
+                                  asset={asset}
+                                  options={options}
+                                />
+                              ) : null}
+                              {isOwnerOrAdmin ? (
+                                <ArchiveButton
+                                  action={archiveContentAssetAction.bind(null, asset.id)}
+                                />
+                              ) : null}
+                            </div>
+                          )}
                       </TableCell>
                     </TableRow>
                   ))}

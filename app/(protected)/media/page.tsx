@@ -42,34 +42,34 @@ export default async function MediaPage() {
   ])
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Media"
         description="Read-only library of ImageKit-backed files already attached to MVP operational records."
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Assets"
+          label="Assets"
           value={metrics.assets.toString()}
-          description="Total saved media records"
+          badge="Total saved media records"
           icon={Image02Icon}
         />
         <MetricCard
-          title="Progress Photos"
+          label="Progress Photos"
           value={metrics.progressPhotos.toString()}
-          description="Attached to PM updates"
+          badge="Attached to PM updates"
           icon={FileImageIcon}
         />
         <MetricCard
-          title="Design Files"
+          label="Design Files"
           value={metrics.designFiles.toString()}
-          description="Attached to design tasks"
+          badge="Attached to design tasks"
           icon={PaintBoardIcon}
         />
         <MetricCard
-          title="Content Files"
+          label="Content Files"
           value={metrics.contentFiles.toString()}
-          description="Attached to content assets"
+          badge="Attached to content assets"
           icon={FileImageIcon}
         />
       </div>

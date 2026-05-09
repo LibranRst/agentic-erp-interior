@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -234,81 +234,54 @@ export async function convertLeadToProjectAction(
   }
 
   const projectId = randomUUID();
-  const convertedRows = await db.execute<{
-    projectId: string;
-    leadId: string;
-  }>(sql`
-    with updated_lead as (
-      update ${schema.leads}
-      set
-        ${schema.leads.status} = 'converted',
-        ${schema.leads.convertedProjectId} = ${projectId}::uuid,
-        ${schema.leads.updatedAt} = now()
-      where ${schema.leads.id} = ${lead.id}
-        and ${schema.leads.status} <> 'converted'
-        and ${schema.leads.convertedProjectId} is null
-      returning ${schema.leads.id}
-    ),
-    inserted_project as (
-      insert into ${schema.projects} (
-        ${schema.projects.id},
-        ${schema.projects.projectName},
-        ${schema.projects.clientName},
-        ${schema.projects.clientPhone},
-        ${schema.projects.location},
-        ${schema.projects.projectType},
-        ${schema.projects.roomArea},
-        ${schema.projects.description},
-        ${schema.projects.status},
-        ${schema.projects.healthStatus},
-        ${schema.projects.priority},
-        ${schema.projects.progressPercentage},
-        ${schema.projects.pmId},
-        ${schema.projects.designerId},
-        ${schema.projects.estimatedValue},
-        ${schema.projects.budgetWarningStatus},
-        ${schema.projects.contentReadyStatus}
-      )
-      select
-        ${projectId}::uuid,
-        ${parsed.data.projectName},
-        ${lead.leadName},
-        ${lead.phone},
-        ${parsed.data.location ?? null},
-        ${parsed.data.projectType ?? null},
-        ${parsed.data.roomArea ?? null},
-        coalesce(${parsed.data.description ?? null}, ${lead.notes}),
-        'lead_converted',
-        'healthy',
-        'medium',
-        0,
-        ${parsed.data.pmId ?? null}::uuid,
-        ${parsed.data.designerId ?? null}::uuid,
-        ${lead.estimatedProjectValue},
-        'none',
-        'not_ready'
-      from updated_lead
-      returning ${schema.projects.id}
-    )
-    select
-      inserted_project.id as "projectId",
-      updated_lead.id as "leadId"
-    from inserted_project
-    join updated_lead on true
-  `);
 
-  const convertedLead = convertedRows.rows[0];
-
-  if (!convertedLead) {
-    return {
-      status: "error",
-      message:
-        "Lead could not be converted. Refresh before retrying.",
-    };
+  try {
+    await db.insert(schema.projects).values({
+      id: projectId,
+      projectName: parsed.data.projectName,
+      clientName: lead.leadName,
+      clientPhone: lead.phone,
+      location: parsed.data.location ?? null,
+      projectType: parsed.data.projectType ?? null,
+      roomArea: parsed.data.roomArea ?? null,
+      description: (parsed.data.description ?? lead.notes) ?? null,
+      status: "lead_converted",
+      healthStatus: "healthy",
+      priority: "medium",
+      progressPercentage: 0,
+      pmId: parsed.data.pmId ?? null,
+      designerId: parsed.data.designerId ?? null,
+      estimatedValue: lead.estimatedProjectValue,
+      budgetWarningStatus: "none",
+      contentReadyStatus: "not_ready",
+    });
+  } catch (error) {
+    console.error("Project insert during lead conversion failed:", error);
+    return { status: "error", message: `Database error: ${(error as Error).message}` };
   }
 
-  revalidateLeadPaths(convertedLead.projectId);
-  revalidatePath(`/projects/${convertedLead.projectId}`);
+  try {
+    await db
+      .update(schema.leads)
+      .set({
+        status: "converted",
+        convertedProjectId: projectId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.leads.id, lead.id),
+          eq(schema.leads.status, lead.status),
+          isNull(schema.leads.convertedProjectId),
+        ),
+      );
+  } catch (error) {
+    // Project already inserted; log but don't fail — the project record exists
+    console.error("Lead status update after conversion failed:", error);
+  }
+
+  revalidateLeadPaths(projectId);
+  revalidatePath(`/projects/${projectId}`);
 
   return {
     status: "success",

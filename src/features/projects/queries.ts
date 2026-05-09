@@ -214,6 +214,8 @@ export async function getProjectHealthOverviewQuery(
     columns: {
       id: true,
       projectName: true,
+      clientName: true,
+      roomArea: true,
       status: true,
       healthStatus: true,
       priority: true,
@@ -253,6 +255,8 @@ export async function getUrgentProjectOverviewQuery(
     columns: {
       id: true,
       projectName: true,
+      clientName: true,
+      roomArea: true,
       status: true,
       healthStatus: true,
       priority: true,

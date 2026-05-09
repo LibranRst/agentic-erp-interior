@@ -31,9 +31,11 @@ import type { DesignTaskFilters as DesignTaskFiltersValue } from "../schemas"
 export function DesignTaskFilters({
   filters,
   options,
+  currentUserRole,
 }: {
   filters: DesignTaskFiltersValue
   options: DesignTaskFormOptions
+  currentUserRole?: string
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -150,13 +152,15 @@ export function DesignTaskFilters({
           options={selectOptions.projectId}
           onValueChange={(value) => updateSelect("projectId", value)}
         />
-        <FilterSelect
-          name="designerId"
-          label="Designer"
-          value={values.designerId}
-          options={selectOptions.designerId}
-          onValueChange={(value) => updateSelect("designerId", value)}
-        />
+        {currentUserRole !== "designer" ? (
+          <FilterSelect
+            name="designerId"
+            label="Designer"
+            value={values.designerId}
+            options={selectOptions.designerId}
+            onValueChange={(value) => updateSelect("designerId", value)}
+          />
+        ) : null}
         <FilterSelect
           name="designType"
           label="Type"

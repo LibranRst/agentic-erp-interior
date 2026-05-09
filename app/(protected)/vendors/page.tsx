@@ -34,7 +34,8 @@ export default async function VendorsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requirePageRole(["owner", "admin", "purchasing"]);
+  const currentUser = await requirePageRole(["owner", "admin", "purchasing"]);
+  const isOwnerOrAdmin = currentUser.role === "owner" || currentUser.role === "admin";
 
   const params = await searchParams;
   const showArchived = getParam(params.archived) === "true";
@@ -54,7 +55,7 @@ export default async function VendorsPage({
   const vendors = await getVendors(filters, showArchived);
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Vendors"
         description="Manage suppliers, contact details, and categories."
@@ -63,7 +64,7 @@ export default async function VendorsPage({
         }
       />
       <div className="mb-4 flex flex-col gap-3">
-        <ArchivedToggle />
+        {isOwnerOrAdmin ? <ArchivedToggle /> : null}
       </div>
       <DataTableShell>
         <Table>
@@ -117,25 +118,29 @@ export default async function VendorsPage({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {showArchived ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <RestoreButton
-                          action={restoreVendorAction.bind(null, vendor.id)}
-                          label="Restore"
-                        />
-                        <DeleteConfirmationDialog
-                          entityLabel={vendor.vendorName}
-                          deleteAction={deleteVendorAction.bind(null, vendor.id)}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-end gap-2">
-                        <VendorDialog mode="edit" initialData={vendor} />
-                        <ArchiveButton
-                          action={archiveVendorAction.bind(null, vendor.id)}
-                        />
-                      </div>
-                    )}
+                    {showArchived
+                      ? isOwnerOrAdmin ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <RestoreButton
+                              action={restoreVendorAction.bind(null, vendor.id)}
+                              label="Restore"
+                            />
+                            <DeleteConfirmationDialog
+                              entityLabel={vendor.vendorName}
+                              deleteAction={deleteVendorAction.bind(null, vendor.id)}
+                            />
+                          </div>
+                        ) : null
+                      : (
+                        <div className="flex items-center justify-end gap-2">
+                          <VendorDialog mode="edit" initialData={vendor} />
+                          {isOwnerOrAdmin ? (
+                            <ArchiveButton
+                              action={archiveVendorAction.bind(null, vendor.id)}
+                            />
+                          ) : null}
+                        </div>
+                      )}
                   </TableCell>
                 </TableRow>
               ))

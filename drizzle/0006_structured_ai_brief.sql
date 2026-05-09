@@ -1,0 +1,1 @@
+ALTER TABLE "ai_summaries" ADD COLUMN "structured_content" jsonb;

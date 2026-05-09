@@ -43,6 +43,13 @@
       "when": 1778164201036,
       "tag": "0005_unique_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778227200000,
+      "tag": "0006_structured_ai_brief",
+      "breakpoints": true
     }
   ]
 }

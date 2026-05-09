@@ -16,6 +16,10 @@ import type {
   MediaRelatedType,
   UploadedMediaInput,
 } from "@/src/features/media/schemas";
+import {
+  getImageKitUploadAuth,
+  uploadToImageKit,
+} from "@/src/features/media/upload-utils";
 
 type ExistingMedia = {
   id: string;
@@ -24,23 +28,6 @@ type ExistingMedia = {
   fileType?: string | null;
   mimeType?: string | null;
   fileSize?: number | null;
-};
-
-type ImageKitAuthResponse = {
-  token: string;
-  expire: number;
-  signature: string;
-  publicKey: string;
-  folderPath: string;
-};
-
-type ImageKitUploadResponse = {
-  fileId?: string;
-  name?: string;
-  url?: string;
-  thumbnailUrl?: string;
-  fileType?: string;
-  size?: number;
 };
 
 export function MediaUploader({
@@ -106,49 +93,11 @@ export function MediaUploader({
     setMessage(null);
 
     try {
-      const auth = await getUploadAuth({ relatedType, projectId, relatedId });
+      const auth = await getImageKitUploadAuth({ relatedType, projectId, relatedId });
       const uploaded: UploadedMediaInput[] = [];
 
       for (const file of Array.from(files)) {
-        const uploadFormData = new FormData();
-        uploadFormData.set("file", file);
-        uploadFormData.set("fileName", file.name);
-        uploadFormData.set("publicKey", auth.publicKey);
-        uploadFormData.set("signature", auth.signature);
-        uploadFormData.set("expire", auth.expire.toString());
-        uploadFormData.set("token", auth.token);
-        uploadFormData.set("folder", auth.folderPath);
-        uploadFormData.set("useUniqueFileName", "true");
-
-        const uploadResponse = await fetch(
-          "https://upload.imagekit.io/api/v1/files/upload",
-          {
-            method: "POST",
-            body: uploadFormData,
-          },
-        );
-
-        if (!uploadResponse.ok) {
-          throw new Error(`${file.name} could not be uploaded to ImageKit.`);
-        }
-
-        const imageKitFile =
-          (await uploadResponse.json()) as ImageKitUploadResponse;
-
-        if (!imageKitFile.fileId || !imageKitFile.url) {
-          throw new Error(`${file.name} upload response was incomplete.`);
-        }
-
-        uploaded.push({
-          fileName: imageKitFile.name ?? file.name,
-          fileType: imageKitFile.fileType,
-          mimeType: file.type || undefined,
-          fileSize: imageKitFile.size ?? file.size,
-          imagekitFileId: imageKitFile.fileId,
-          imagekitUrl: imageKitFile.url,
-          thumbnailUrl: imageKitFile.thumbnailUrl,
-          folderPath: auth.folderPath,
-        });
+        uploaded.push(await uploadToImageKit(file, auth));
       }
 
       if (persistUploadedMedia) {
@@ -222,34 +171,6 @@ export function MediaUploader({
       </div>
     </Field>
   );
-}
-
-async function getUploadAuth({
-  relatedType,
-  projectId,
-  relatedId,
-}: {
-  relatedType: MediaRelatedType;
-  projectId?: string | null;
-  relatedId?: string | null;
-}) {
-  const response = await fetch("/api/imagekit/upload-auth", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ relatedType, projectId, relatedId }),
-  });
-
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-
-    throw new Error(body?.message ?? "ImageKit upload authentication failed.");
-  }
-
-  return (await response.json()) as ImageKitAuthResponse;
 }
 
 function MediaList({

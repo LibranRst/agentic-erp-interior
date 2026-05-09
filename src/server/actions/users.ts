@@ -2,10 +2,11 @@
 
 import { randomBytes } from "node:crypto";
 
-import { and, eq, isNull, ne } from "drizzle-orm";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { z } from "zod";
+
+import { and, eq, isNull, ne } from "drizzle-orm";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { hashInviteToken } from "@/src/lib/auth/invites";
@@ -355,6 +356,53 @@ export async function updateUserStatusAction(input: unknown) {
     status: "success",
     message: "Status updated.",
   };
+}
+
+const impersonationCookie = "x-debug-user-id";
+
+export async function startImpersonationAction(userId: string) {
+  const currentUser = await requireUser();
+  requireRole(currentUser, ["owner", "admin"]);
+
+  const parsed = z.uuid("User id is invalid.").safeParse(userId);
+
+  if (!parsed.success) {
+    return { status: "error", message: parsed.error.issues[0]?.message };
+  }
+
+  if (parsed.data === currentUser.id) {
+    return { status: "error", message: "You are already logged in as yourself." };
+  }
+
+  const target = await db.query.users.findFirst({
+    where: eq(schema.users.id, parsed.data),
+  });
+
+  if (!target || target.status !== "active") {
+    return { status: "error", message: "Target user not found or is inactive." };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(impersonationCookie, parsed.data, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60, // 1 hour
+  });
+
+  return { status: "success", message: `Impersonating ${target.name}.` };
+}
+
+export async function stopImpersonationAction() {
+  const cookieStore = await cookies();
+  cookieStore.set(impersonationCookie, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+
+  return { status: "success", message: "Impersonation ended." };
 }
 
 function buildInviteUrl(token: string) {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert02Icon, FileImageIcon, Folder01Icon, PaintBoardIcon, ViewIcon } from "@hugeicons/core-free-icons";
 
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
 import {
@@ -65,7 +65,7 @@ export default async function ProjectsPage({
   ]);
 
   return (
-    <PageContainer className="overflow-x-hidden">
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Projects"
         description="Track active projects, health, progress, team ownership, deadlines, and operational risk."
@@ -85,25 +85,29 @@ export default async function ProjectsPage({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Active"
+          label="Active"
           value={metrics.active.toString()}
-          description="Projects still in delivery"
+          badge="Projects still in delivery"
+          icon={Folder01Icon}
         />
         <MetricCard
-          title="Urgent"
+          label="Urgent"
           value={metrics.urgent.toString()}
-          description="Urgent, blocked, or delayed"
           badge="Watch"
+          tone={metrics.urgent > 0 ? "danger" : "primary"}
+          icon={Alert02Icon}
         />
         <MetricCard
-          title="Design Stage"
+          label="Design Stage"
           value={metrics.designStage.toString()}
-          description="Concept, revision, or DED"
+          badge="Concept, revision, or DED"
+          icon={PaintBoardIcon}
         />
         <MetricCard
-          title="Content Ready"
+          label="Content Ready"
           value={metrics.contentReady.toString()}
-          description="Ready for marketing review"
+          badge="Ready for marketing review"
+          icon={FileImageIcon}
         />
       </div>
 

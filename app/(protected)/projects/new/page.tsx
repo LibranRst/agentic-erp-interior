@@ -16,7 +16,7 @@ export default async function NewProjectPage() {
   const options = await getProjectFormOptions();
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <PageHeader
         title="New Project"
         description="Create a project record for operational tracking, assignment, health, deadlines, and owner visibility."

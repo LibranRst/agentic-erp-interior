@@ -28,6 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { UploadedMediaInput } from "@/src/features/media/schemas";
 import { toDateInputValue } from "@/src/features/projects/utils";
+import { DebugFillButton } from "@/components/shared/debug-fill-button";
 import {
   createLeadAction,
   updateLeadAction,
@@ -240,7 +241,8 @@ export function LeadForm({
         </FieldGroup>
       </FieldSet>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <DebugFillButton type="lead" />
         <SubmitButton mode={mode} />
       </div>
     </form>

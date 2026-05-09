@@ -1,6 +1,11 @@
 import { PageContainer, PageHeader } from "@/components/layout/page-container";
 import { MetricCard } from "@/components/shared/metric-card";
 import {
+  Alert02Icon,
+  FileImageIcon,
+  Task01Icon,
+} from "@hugeicons/core-free-icons"
+import {
   Card,
   CardContent,
   CardDescription,
@@ -29,7 +34,7 @@ export default async function DailyUpdatesPage({
   }, showArchived);
 
   return (
-    <PageContainer className="overflow-x-hidden">
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Daily Updates"
         description="Structured daily PM reports for progress, blockers, work completed, next action, and ImageKit-backed evidence."
@@ -38,25 +43,29 @@ export default async function DailyUpdatesPage({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Submitted Today"
+          label="Submitted Today"
           value={data.metrics.submittedToday.toString()}
-          description="PM updates"
+          badge="PM updates"
+          icon={Task01Icon}
         />
         <MetricCard
-          title="With Issues"
+          label="With Issues"
           value={data.metrics.withIssues.toString()}
-          description="Issue, blocker, or risk status"
-          badge={data.metrics.withIssues > 0 ? "Check" : undefined}
+          badge={data.metrics.withIssues > 0 ? "Check" : "Issue, blocker, or risk status"}
+          tone={data.metrics.withIssues > 0 ? "danger" : "primary"}
+          icon={Alert02Icon}
         />
         <MetricCard
-          title="Attachments"
+          label="Attachments"
           value={data.metrics.attachments.toString()}
-          description="ImageKit progress media"
+          badge="ImageKit progress media"
+          icon={FileImageIcon}
         />
         <MetricCard
-          title="Latest Records"
+          label="Latest Records"
           value={data.metrics.latest.toString()}
-          description="Visible daily updates"
+          badge="Visible daily updates"
+          icon={Task01Icon}
         />
       </div>
 

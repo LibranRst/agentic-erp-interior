@@ -20,7 +20,7 @@ export default async function ArchivedPage() {
   await requirePageRole(["owner", "admin"]);
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-none">
       <PageHeader
         title="Archived"
         description="Review and restore soft-archived records from all modules."
